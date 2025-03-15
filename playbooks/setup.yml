@@ -5,26 +5,41 @@
   
   tasks:
 
-    - name: Configure users, shell etc
-
+    - name: INITIAL SETUP BLOCK
+    - name: Configure users, shell, ssh keys etc
+    - name: Install, configure sudo
     - name: Configure sshd
-
-    - name: Configure firewall rules
-
     - name: Update software
-
     - name: Install base OS utilities - screen git htop etc
 
-    - name: Install base packages for php, pgsql, caching, etc.
+    - name: FIREWALL SETUP BLOCK
+    - name: Install firewall
+    - name: Configure firewall 
 
-    - name: Retrieve and install phpBB
-
+    - name: PG SETUP BLOCK
+    - name: Create pg service user and directories
+    - name: Retrieve and install pgsql
     - name: Configure pgsql
 
+    - name: HTTPD SETUP BLOCK
+    - name: Create web service user and directories
+    - name: Retrieve and install httpd
     - name: Configure httpd
 
+    - name: PHPBB SETUP BLOCK
+    - name: Retrieve and install phpBB
     - name: Configure phpBB
 
-    - name: Configure caching?
+    - name: CACHE SETUP BLOCK
+    - name: Create cache service user and directories
+    - name: Retrieve and install cache
+    - name: Configure cache
 
-    - name: Install and Set up Cockpit
+    - name: COCKPIT SETUP BLOCK
+    - name: Retrieve and install cockpit
+    - name: Configure cockpit
+
+    - name: POST-SETUP BLOCK
+    - name: Small performance test
+    - name: Dump memory usage and process count stats
+    - name: Echo DB user information
