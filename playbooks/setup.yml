@@ -5,41 +5,107 @@
   
   tasks:
 
+    # ------------------------------------------------------
     - name: INITIAL SETUP BLOCK
-    - name: Configure users, shell, ssh keys etc
-    - name: Install, configure sudo
-    - name: Configure sshd
-    - name: Update software
-    - name: Install base OS utilities - screen git htop etc
 
+    - name: Update software
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: full
+
+    - name: Configure basic user, ssh keys 
+      ansible.builtin.user:
+        name: jfritz
+        groups: sudo
+        generate_ssh_key: yes
+        ssh_key_bits: 4096
+
+    - name: Install base OS utilities 
+      ansible.builtin.apt:
+        name: "{{ item }}"
+      loop:
+        - sudo
+        - screen
+        - htop
+        - git
+        - vim
+        - openssh
+        - iptables # ? 
+        - tree
+
+    - name: Configure sudo
+      community.general.sudoers:
+        name: sudo-as-root
+        state: present
+        group: sudo
+        runas: root
+        commands: ALL
+
+    - name: Configure sshd
+    # TODO
+
+
+    # ------------------------------------------------------
+
+    # ------------------------------------------------------
     - name: FIREWALL SETUP BLOCK
     - name: Install firewall
     - name: Configure firewall 
+    # ------------------------------------------------------
 
+    # ------------------------------------------------------
     - name: PG SETUP BLOCK
-    - name: Create pg service user and directories
     - name: Retrieve and install pgsql
-    - name: Configure pgsql
+      ansible.builtin.apt:
+        update_cache: true
+        name: postgresql
 
+    - name: Create pg user, db, permissions
+    # ------------------------------------------------------
+
+    # ------------------------------------------------------
+    - name: PHP SETUP BLOCK
+    - name: Retrieve and install php
+    - name: Configure php
+    - name: Retrieve and install php modules
+    - name: Configure php modules
+    # ------------------------------------------------------
+
+    # ------------------------------------------------------
     - name: HTTPD SETUP BLOCK
     - name: Create web service user and directories
     - name: Retrieve and install httpd
     - name: Configure httpd
+    # ------------------------------------------------------
 
+    # ------------------------------------------------------
     - name: PHPBB SETUP BLOCK
     - name: Retrieve and install phpBB
     - name: Configure phpBB
+    # ------------------------------------------------------
 
+    # ------------------------------------------------------
     - name: CACHE SETUP BLOCK
     - name: Create cache service user and directories
     - name: Retrieve and install cache
     - name: Configure cache
+    # ------------------------------------------------------
 
+    # ------------------------------------------------------
     - name: COCKPIT SETUP BLOCK
     - name: Retrieve and install cockpit
     - name: Configure cockpit
+    # ------------------------------------------------------
 
-    - name: POST-SETUP BLOCK
+    # ------------------------------------------------------
+    - name: CLEANUP BLOCK
+    - name: Disable root ssh
+    # ------------------------------------------------------
+
+    # ------------------------------------------------------
+    - name: SUMMARY BLOCK
     - name: Small performance test
     - name: Dump memory usage and process count stats
     - name: Echo DB user information
+    - name: Echo path to phpbb URL for install
+    # ------------------------------------------------------
