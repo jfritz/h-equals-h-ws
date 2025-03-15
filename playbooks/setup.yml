@@ -1,0 +1,30 @@
+---
+- hosts: all
+  become: false
+  gather_facts: false
+  
+  tasks:
+
+    - name: Configure users, shell etc
+
+    - name: Configure sshd
+
+    - name: Configure firewall rules
+
+    - name: Update software
+
+    - name: Install base OS utilities - screen git htop etc
+
+    - name: Install base packages for php, pgsql, caching, etc.
+
+    - name: Retrieve and install phpBB
+
+    - name: Configure pgsql
+
+    - name: Configure httpd
+
+    - name: Configure phpBB
+
+    - name: Configure caching?
+
+    - name: Install and Set up Cockpit
