@@ -1,0 +1,53 @@
+# GitHub Action - Run ansible-lint against repository code
+# https://github.com/marketplace/actions/run-ansible-lint
+# https://docs.github.com/en/actions/quickstart
+# Source of truth on this configuration is located here:
+# https://github.com/ansiblejunky/ansible-project-template/blob/master/.github/ansible-lint.yml
+
+name: ansible-lint
+on: [push, pull_request]
+jobs:
+  test:
+    name: container-linter
+    runs-on: ubuntu-latest
+    environment: ansible-lint
+    container:
+      # https://ansible.readthedocs.io/projects/dev-tools/container/
+      image: ghcr.io/ansible/community-ansible-dev-tools:latest
+      options: --user root
+      ports:
+        - 80
+      env:
+        ANSIBLE_GALAXY_SERVER_CERTIFIED_TOKEN: ${{ secrets.ANSIBLE_GALAXY_SERVER_CERTIFIED_TOKEN }}
+        ANSIBLE_GALAXY_SERVER_CERTIFIED_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_CERTIFIED_URL }}
+        ANSIBLE_GALAXY_SERVER_CERTIFIED_AUTH_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_CERTIFIED_AUTH_URL }}
+        ANSIBLE_GALAXY_SERVER_VALIDATED_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_VALIDATED_URL }}
+        ANSIBLE_GALAXY_SERVER_VALIDATED_AUTH_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_VALIDATED_AUTH_URL }}
+        ANSIBLE_GALAXY_SERVER_VALIDATED_TOKEN: ${{ secrets.ANSIBLE_GALAXY_SERVER_VALIDATED_TOKEN }}
+        ANSIBLE_GALAXY_SERVER_COMMUNITY_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_COMMUNITY_URL }}
+        ANSIBLE_GALAXY_SERVER_LIST: ${{ vars.ANSIBLE_GALAXY_SERVER_LIST }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+      - name: Run ansible-lint
+        run: ansible-lint
+  # test:
+  #   name: ansible-lint
+  #   runs-on: ubuntu-latest
+  #   environment: ansible-lint
+  #   steps:
+  #     # Leverages action defined here https://github.com/actions/checkout/blob/main/action.yml
+  #     - name: Checkout repository
+  #       uses: actions/checkout@main
+  #     # Leverages action defined here https://github.com/ansible/ansible-lint/blob/main/action.yml
+  #     - name: Run ansible-lint
+  #       uses: ansible/ansible-lint@main
+  #       env:
+  #         ANSIBLE_GALAXY_SERVER_CERTIFIED_TOKEN: ${{ secrets.ANSIBLE_GALAXY_SERVER_CERTIFIED_TOKEN }}
+  #         ANSIBLE_GALAXY_SERVER_CERTIFIED_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_CERTIFIED_URL }}
+  #         ANSIBLE_GALAXY_SERVER_CERTIFIED_AUTH_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_CERTIFIED_AUTH_URL }}
+  #         ANSIBLE_GALAXY_SERVER_VALIDATED_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_VALIDATED_URL }}
+  #         ANSIBLE_GALAXY_SERVER_VALIDATED_AUTH_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_VALIDATED_AUTH_URL }}
+  #         ANSIBLE_GALAXY_SERVER_VALIDATED_TOKEN: ${{ secrets.ANSIBLE_GALAXY_SERVER_VALIDATED_TOKEN }}
+  #         ANSIBLE_GALAXY_SERVER_COMMUNITY_URL: ${{ vars.ANSIBLE_GALAXY_SERVER_COMMUNITY_URL }}
+  #         ANSIBLE_GALAXY_SERVER_LIST: ${{ vars.ANSIBLE_GALAXY_SERVER_LIST }}
