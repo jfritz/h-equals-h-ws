@@ -9,6 +9,8 @@
     - name: INITIAL SETUP BLOCK
       block:
 
+        # TODO set central timezone and sync time
+
         - name: Set hostname
           ansible.builtin.hostname:
             name: h-equals-h
@@ -23,6 +25,11 @@
           ansible.builtin.apt:
             update_cache: true
             upgrade: full
+
+        - name: Configure root pw
+          ansible.builtin.user:
+            name: root
+            password: 'password' # TODO change
 
         - name: Configure basic user
           ansible.builtin.user:
