@@ -252,7 +252,8 @@
 
         - name: Install language pack
           ansible.builtin.copy:
-            src: /www/american_english_4_14_0/*
+            remote_src: true
+            src: /www/american_english_4_14_0/
             dest: /www/
 
         - name: Remove language pack src
@@ -260,7 +261,7 @@
             path: "{{ item }}"
             state: absent
           loop:
-            - /www/american_english_4_14_0/* 
+            - /www/american_english_4_14_0/ 
             - /www/american_english_4_14_0.zip
           
 
