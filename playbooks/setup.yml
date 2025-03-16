@@ -59,7 +59,7 @@
         - name: Basic user env
           ansible.builtin.lineinfile:
             line: "alias ll=\"ls -ahl --color\""
-            file: /home/jfritz/.bashrc
+            path: /home/jfritz/.bashrc
 
         - name: See if ec2-user and key exists
           stat: path=/home/ec2-user/.ssh
@@ -281,6 +281,7 @@
             owner: www-data
             group: www-data
             mode: '2770'
+            recurse: true
 
     # ------------------------------------------------------
 
