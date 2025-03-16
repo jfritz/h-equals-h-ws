@@ -1,6 +1,9 @@
 ---
+# Designed to run on Debian 12
 - hosts: all
+  # must enable root SSH: vi /etc/ssh/sshd_config PermitRootLogin and restart sshd
   become: false
+  # remote_user: root # see inventory
   gather_facts: false
   
   tasks:
@@ -10,6 +13,13 @@
       block:
 
         # TODO set central timezone and sync time
+        - name: Set TZ
+          community.general.timezone:
+            name: America/Chicago
+
+        - name: Set time syncing
+          ansible.builtin.command:
+            cmd: timedatectl set-ntp true
 
         - name: Set hostname
           ansible.builtin.hostname:
@@ -17,7 +27,7 @@
         
         - name: Set static ip FQDN hostname in hosts
           ansible.builtin.lineinfile:
-            file: /etc/hosts
+            path: /etc/hosts
             # TODO retrieve static IP
             line: "127.0.1.1 h-equals-h.com h-equals-h"
 
@@ -29,13 +39,19 @@
         - name: Configure root pw
           ansible.builtin.user:
             name: root
-            password: 'password' # TODO change
+            # TODO change later
+            # generated with mkpasswd --method=sha-512 `apt install whois`
+            # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
+            password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
 
         - name: Configure basic user
           ansible.builtin.user:
             name: jfritz
             groups: sudo
-            password: 'password' # TODO change
+            # TODO change later
+            # generated with mkpasswd --method=sha-512 `apt install whois`
+            # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
+            password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
 
         - name: See if ec2-user and key exists
           stat: path=/home/ec2-user/.ssh
@@ -72,9 +88,9 @@
             - iptables # ? 
             - tree
             - curl
+            - whois
 
         - name: Configure sudo
-          # might need to chmod o+w before/after
           community.general.sudoers:
             name: sudo-as-root
             state: present
@@ -103,25 +119,35 @@
           loop:
             - "postgresql"
             - "postgresql-client"
+            # - "python3-psycopg2" # for ansible pgsql comunity extensions
+          
+        - name: Set postgres system user pw
+          ansible.builtin.user:
+            name: postgres
+            # TODO change later
+            # generated with mkpasswd --method=sha-512 `apt install whois`
+            # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
+            password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
 
-        - name: Db setup - Create a new database 'heqh_bbs'
-          community.postgresql.postgresql_db:
-            name: heqh_bbs
-            comment: H equals H bbs
+        - name: Create postgres user heqh_dbu
+          ansible.builtin.command:
+            become: true
+            become_user: postgres
+            # pw hash is "md5" + md5("pw" + "username" as salt)
+            cmd: psql -d postgres -c 'CREATE ROLE heqh_dbu WITH PASSWORD 'md584a9cd3ec8cfb9d231867841b312c614';
 
-        - name: Db setup - create pg user
-          community.postgresql.postgresql_user:
-            db: heqh_bbs
-            name: heqh
-            password: temp-pw123
+        - name: Create postgres db heqh_bbs for heqh_dbu
+          ansible.builtin.command:
+            become: true
+            become_user: postgres
+            cmd: "createdb -O heqh_dbu heqh_bbs"
 
-        - name: Db setup - GRANT ALL PRIVILEGES ON SCHEMA 
-          community.postgresql.postgresql_privs:
-            db: heqh_bbs
-            privs: ALL
-            type: schema
-            objs: heqh_bbs # ALL_IN_SCHEMA
-            role: heqh
+        - name: Grant privs on postgres user heqh_dbu against heqh_bbs
+          ansible.builtin.command:
+            become: true
+            become_user: postgres
+            # pw hash is md5("pw" + "username" as salt)
+            cmd: psql -d postgres -c 'GRANT CONNECT, CREATE, SELECT, INSERT, UPDATE, DELETE ON DATABASAE heqh_bbs';
 
             # TODO ensure user can only connect locally
             # TODO vaultify password and change it
@@ -214,7 +240,11 @@
 
     # ------------------------------------------------------
     # - name: CLEANUP BLOCK
-    # - name: Disable root ssh
+    - name: Disable root ssh
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        line: "# PermitRootLogin yes"
+        regexp: "^.*PermitRootLogin.*"
     # ------------------------------------------------------
 
     # ------------------------------------------------------
