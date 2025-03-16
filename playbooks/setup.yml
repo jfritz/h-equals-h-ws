@@ -47,12 +47,19 @@
         - name: Configure basic user
           ansible.builtin.user:
             name: jfritz
-            groups: sudo
+            groups: 
+              - sudo 
+              - www-data
             shell: /bin/bash
             # TODO change later
             # generated with mkpasswd --method=sha-512 `apt install whois`
             # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
             password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
+
+        - name: Basic user env
+          ansible.builtin.lineinfile:
+            line: "alias ll=\"ls -ahl --color\""
+            file: /home/jfritz/.bashrc
 
         - name: See if ec2-user and key exists
           stat: path=/home/ec2-user/.ssh
@@ -168,11 +175,15 @@
         - name: Retrieve and install php
           ansible.builtin.apt:
             update_cache: true
-            name: php-fpm # fpm version used with lighttpd
+            name: "{{ item }}"
+          loop:
+            - php-fpm # fpm version used with lighttpd
+            - php-xml
+            - php-mbstring
+            - php-pgsql
 
-        # - name: Configure php with sane defaults for 2gb system
-        # - name: Retrieve and install php modules
-        # - name: Configure php modules
+        # - name: Configure php with sane defaults for 2gb system, memory limits, file upload limits, et.
+
     # ------------------------------------------------------
 
     # ------------------------------------------------------
@@ -264,8 +275,12 @@
             - /www/american_english_4_14_0/ 
             - /www/american_english_4_14_0.zip
           
-
-          # TODO confirm permissions of everyhthing
+        - name: Finalize permissions of www
+          ansible.builtin.file:
+            path: /var/www/html
+            owner: www-data
+            group: www-data
+            mode: '2770'
 
     # ------------------------------------------------------
 
