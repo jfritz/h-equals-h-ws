@@ -48,6 +48,7 @@
           ansible.builtin.user:
             name: jfritz
             groups: sudo
+            shell: /bin/bash
             # TODO change later
             # generated with mkpasswd --method=sha-512 `apt install whois`
             # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
@@ -60,11 +61,11 @@
         - name: Use ssh key from ec2-user for basic user
           # you downloaded the ec2-user key, right?
           ansible.builtin.copy:
+            remote_src: true
             src: /home/ec2-user/.ssh
             dest: /home/jfritz/.ssh
             owner: jfritz
             group: jfritz
-            remote_src: true
           when: stat_result.stat.isdir|d(False)
         
         - name: Remove ec2-user
@@ -119,7 +120,6 @@
           loop:
             - "postgresql"
             - "postgresql-client"
-            # - "python3-psycopg2" # for ansible pgsql comunity extensions
           
         - name: Set postgres system user pw
           ansible.builtin.user:
@@ -149,10 +149,16 @@
           ansible.builtin.command:
             # pw hash is md5("pw" + "username" as salt)
             cmd: >
-              psql -d postgres -c 'GRANT CONNECT, CREATE, SELECT, INSERT, UPDATE, DELETE ON DATABASAE heqh_bbs TO heqh_dbu;'
+              psql -d postgres -c 'GRANT CONNECT, CREATE ON DATABASE heqh_bbs TO heqh_dbu;'
 
             # TODO ensure user can only connect locally
             # TODO vaultify password and change it
+
+        - name: Enable and restart postgresql
+          ansible.builtin.service:
+            name: postgresql
+            state: restarted
+            enabled: true
 
     # ------------------------------------------------------
 
@@ -192,6 +198,12 @@
             dest: /www
             state: link 
 
+        - name: Enable and restart lighttpd
+          ansible.builtin.service:
+            name: lighttpd
+            state: restarted
+            enabled: true
+
         # TODO setup SSL https://wiki.debian.org/Lighttpd#SSL.2FTLS_.28HTTPS.29
     # ------------------------------------------------------
 
@@ -201,7 +213,7 @@
 
         # TODO ansibleify
         - name: Clear /www
-          ansible.builtin.command:
+          ansible.builtin.shell:
             cmd: "rm -rf /www/*"
 
         - name: Retrieve phpBB
@@ -212,18 +224,47 @@
           
         - name: Install phpBB
           ansible.builtin.unarchive:
+            remote_src: true
             src: /www/phpbb.zip
             dest: /www/
 
-        - name: Copy phpBB to root to avoid /phpBB3
+        - name: Copy phpBB to root to avoid ugly /phpBB3 path
           ansible.builtin.copy:
+            remote_src: true
             src: /www/phpBB3/
             dest: /www/
 
         - name: Purge files in /phpBB3
           ansible.builtin.file:
-            src: /www/phpBB3
+            path: /www/phpBB3
             state: absent
+
+        - name: Retrieve American English Language Pack for phpBB3
+          ansible.builtin.get_url:
+            url: https://www.phpbb.com/customise/db/download/208693
+            dest: /www/american_english_4_14_0.zip
+          
+        - name: Unzip language pack
+          ansible.builtin.unarchive:
+            remote_src: true
+            src: /www/american_english_4_14_0.zip
+            dest: /www/
+
+        - name: Install language pack
+          ansible.builtin.copy:
+            src: /www/american_english_4_14_0/*
+            dest: /www/
+
+        - name: Remove language pack src
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /www/american_english_4_14_0/* 
+            - /www/american_english_4_14_0.zip
+          
+
+          # TODO confirm permissions of everyhthing
 
     # ------------------------------------------------------
 
@@ -251,8 +292,7 @@
 
     # ------------------------------------------------------
     # - name: SUMMARY BLOCK
-    # - name: Small performance test
-    # - name: Dump memory usage and process count stats
     # - name: Echo DB user information
     # - name: Echo path to phpbb URL for install
+    # - name: Echo path to cockpit
     # ------------------------------------------------------
