@@ -130,24 +130,26 @@
             password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
 
         - name: Create postgres user heqh_dbu
+          become: true
+          become_user: postgres
           ansible.builtin.command:
-            become: true
-            become_user: postgres
             # pw hash is "md5" + md5("pw" + "username" as salt)
-            cmd: psql -d postgres -c 'CREATE ROLE heqh_dbu WITH PASSWORD 'md584a9cd3ec8cfb9d231867841b312c614';
+            cmd: >
+              psql -d postgres -c "CREATE ROLE heqh_dbu WITH PASSWORD 'md584a9cd3ec8cfb9d231867841b312c614';"
 
         - name: Create postgres db heqh_bbs for heqh_dbu
+          become: true
+          become_user: postgres
           ansible.builtin.command:
-            become: true
-            become_user: postgres
             cmd: "createdb -O heqh_dbu heqh_bbs"
 
         - name: Grant privs on postgres user heqh_dbu against heqh_bbs
+          become: true
+          become_user: postgres
           ansible.builtin.command:
-            become: true
-            become_user: postgres
             # pw hash is md5("pw" + "username" as salt)
-            cmd: psql -d postgres -c 'GRANT CONNECT, CREATE, SELECT, INSERT, UPDATE, DELETE ON DATABASAE heqh_bbs';
+            cmd: >
+              psql -d postgres -c 'GRANT CONNECT, CREATE, SELECT, INSERT, UPDATE, DELETE ON DATABASAE heqh_bbs TO heqh_dbu;'
 
             # TODO ensure user can only connect locally
             # TODO vaultify password and change it
