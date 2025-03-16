@@ -7,105 +7,213 @@
 
     # ------------------------------------------------------
     - name: INITIAL SETUP BLOCK
+      block:
 
-    - name: Update software
-      ansible.builtin.apt:
-        update_cache: true
-        upgrade: full
+        - name: Set hostname
+          ansible.builtin.hostname:
+            name: h-equals-h
+        
+        - name: Set static ip FQDN hostname in hosts
+          ansible.builtin.lineinfile:
+            file: /etc/hosts
+            # TODO retrieve static IP
+            line: "127.0.1.1 h-equals-h.com h-equals-h"
 
-    - name: Configure basic user, ssh keys 
-      ansible.builtin.user:
-        name: jfritz
-        groups: sudo
-        generate_ssh_key: yes
-        ssh_key_bits: 4096
+        - name: Update software
+          ansible.builtin.apt:
+            update_cache: true
+            upgrade: full
 
-    - name: Install base OS utilities 
-      ansible.builtin.apt:
-        name: "{{ item }}"
-      loop:
-        - sudo
-        - screen
-        - htop
-        - git
-        - vim
-        - openssh
-        - iptables # ? 
-        - tree
+        - name: Configure basic user
+          ansible.builtin.user:
+            name: jfritz
+            groups: sudo
+            password: 'password' # TODO change
 
-    - name: Configure sudo
-      community.general.sudoers:
-        name: sudo-as-root
-        state: present
-        group: sudo
-        runas: root
-        commands: ALL
+        - name: See if ec2-user and key exists
+          stat: path=/home/ec2-user/.ssh
+          register: stat_result
 
-    - name: Configure sshd
-    # TODO
+        - name: Use ssh key from ec2-user for basic user
+          # you downloaded the ec2-user key, right?
+          ansible.builtin.copy:
+            src: /home/ec2-user/.ssh
+            dest: /home/jfritz/.ssh
+            owner: jfritz
+            group: jfritz
+            remote_src: true
+          when: stat_result.stat.isdir|d(False)
+        
+        - name: Remove ec2-user
+          ansible.builtin.user:
+            name: ec2-user
+            state: absent
+            remove: true
+          when: stat_result.stat.isdir|d(False)
 
+        - name: Install base OS utilities 
+          ansible.builtin.apt:
+            name: "{{ item }}"
+          loop:
+            - sudo
+            - unzip
+            - screen
+            - htop
+            - git
+            - vim
+            - openssl
+            - iptables # ? 
+            - tree
+            - curl
 
+        - name: Configure sudo
+          # might need to chmod o+w before/after
+          community.general.sudoers:
+            name: sudo-as-root
+            state: present
+            group: sudo
+            runas: root
+            commands: ALL
+
+        # - name: Configure sshd
     # ------------------------------------------------------
 
     # ------------------------------------------------------
-    - name: FIREWALL SETUP BLOCK
-    - name: Install firewall
-    - name: Configure firewall 
+    # - name: FIREWALL SETUP BLOCK
+    # - name: Install firewall
+    # - name: Configure firewall 
     # ------------------------------------------------------
 
     # ------------------------------------------------------
+    # https://wiki.debian.org/PostgreSql
     - name: PG SETUP BLOCK
-    - name: Retrieve and install pgsql
-      ansible.builtin.apt:
-        update_cache: true
-        name: postgresql
+      block:
 
-    - name: Create pg user, db, permissions
+        - name: Retrieve and install pgsql
+          ansible.builtin.apt:
+            update_cache: true
+            name: "{{ item }}"
+          loop:
+            - "postgresql"
+            - "postgresql-client"
+
+        - name: Db setup - Create a new database 'heqh_bbs'
+          community.postgresql.postgresql_db:
+            name: heqh_bbs
+            comment: H equals H bbs
+
+        - name: Db setup - create pg user
+          community.postgresql.postgresql_user:
+            db: heqh_bbs
+            name: heqh
+            password: temp-pw123
+
+        - name: Db setup - GRANT ALL PRIVILEGES ON SCHEMA 
+          community.postgresql.postgresql_privs:
+            db: heqh_bbs
+            privs: ALL
+            type: schema
+            objs: heqh_bbs # ALL_IN_SCHEMA
+            role: heqh
+
+            # TODO ensure user can only connect locally
+            # TODO vaultify password and change it
+
     # ------------------------------------------------------
 
     # ------------------------------------------------------
     - name: PHP SETUP BLOCK
-    - name: Retrieve and install php
-    - name: Configure php
-    - name: Retrieve and install php modules
-    - name: Configure php modules
+      block: 
+        - name: Retrieve and install php
+          ansible.builtin.apt:
+            update_cache: true
+            name: php-fpm # fpm version used with lighttpd
+
+        # - name: Configure php with sane defaults for 2gb system
+        # - name: Retrieve and install php modules
+        # - name: Configure php modules
     # ------------------------------------------------------
 
     # ------------------------------------------------------
     - name: HTTPD SETUP BLOCK
-    - name: Create web service user and directories
-    - name: Retrieve and install httpd
-    - name: Configure httpd
+      block: 
+
+        - name: Retrieve and install httpd
+          ansible.builtin.apt:
+            update_cache: true
+            name: "{{ item }}"
+          loop:
+            - lighttpd
+            - lighttpd-mod-deflate
+            - lighttpd-mod-openssl
+
+        - name: Configure httpd for php, must have php-fpm installed
+          ansible.builtin.command:
+            cmd: lighty-enable-mod fastcgi-php-fpm 
+
+        - name: Link /www to /var/www/html for convenience
+          ansible.builtin.file:
+            src: /var/www/html
+            dest: /www
+            state: link 
+
+        # TODO setup SSL https://wiki.debian.org/Lighttpd#SSL.2FTLS_.28HTTPS.29
     # ------------------------------------------------------
 
     # ------------------------------------------------------
     - name: PHPBB SETUP BLOCK
-    - name: Retrieve and install phpBB
-    - name: Configure phpBB
+      block: 
+
+        # TODO ansibleify
+        - name: Clear /www
+          ansible.builtin.command:
+            cmd: "rm -rf /www/*"
+
+        - name: Retrieve phpBB
+          ansible.builtin.get_url:
+            url: https://download.phpbb.com/pub/release/3.3/3.3.14/phpBB-3.3.14.zip
+            dest: /www/phpbb.zip
+            mode: '0755'
+          
+        - name: Install phpBB
+          ansible.builtin.unarchive:
+            src: /www/phpbb.zip
+            dest: /www/
+
+        - name: Copy phpBB to root to avoid /phpBB3
+          ansible.builtin.copy:
+            src: /www/phpBB3/
+            dest: /www/
+
+        - name: Purge files in /phpBB3
+          ansible.builtin.file:
+            src: /www/phpBB3
+            state: absent
+
     # ------------------------------------------------------
 
     # ------------------------------------------------------
-    - name: CACHE SETUP BLOCK
-    - name: Create cache service user and directories
-    - name: Retrieve and install cache
-    - name: Configure cache
+    # - name: CACHE SETUP BLOCK
+    # - name: Create cache service user and directories
+    # - name: Retrieve and install cache
+    # - name: Configure cache
     # ------------------------------------------------------
 
     # ------------------------------------------------------
-    - name: COCKPIT SETUP BLOCK
-    - name: Retrieve and install cockpit
-    - name: Configure cockpit
+    # - name: COCKPIT SETUP BLOCK
+    # - name: Retrieve and install cockpit
+    # - name: Configure cockpit
     # ------------------------------------------------------
 
     # ------------------------------------------------------
-    - name: CLEANUP BLOCK
-    - name: Disable root ssh
+    # - name: CLEANUP BLOCK
+    # - name: Disable root ssh
     # ------------------------------------------------------
 
     # ------------------------------------------------------
-    - name: SUMMARY BLOCK
-    - name: Small performance test
-    - name: Dump memory usage and process count stats
-    - name: Echo DB user information
-    - name: Echo path to phpbb URL for install
+    # - name: SUMMARY BLOCK
+    # - name: Small performance test
+    # - name: Dump memory usage and process count stats
+    # - name: Echo DB user information
+    # - name: Echo path to phpbb URL for install
     # ------------------------------------------------------
