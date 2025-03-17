@@ -217,17 +217,17 @@
             state: restarted
             enabled: true
 
+        # TODO ansibleify
+        - name: Clear anything installed in /var/www/html
+          ansible.builtin.shell:
+            cmd: "rm -rf /www/*"
+
         # TODO setup SSL https://wiki.debian.org/Lighttpd#SSL.2FTLS_.28HTTPS.29
     # ------------------------------------------------------
 
     # ------------------------------------------------------
     - name: PHPBB SETUP BLOCK
       block: 
-
-        # TODO ansibleify
-        - name: Clear /www
-          ansible.builtin.shell:
-            cmd: "rm -rf /www/*"
 
         - name: Retrieve phpBB
           ansible.builtin.get_url:
@@ -241,11 +241,11 @@
             src: /www/phpbb.zip
             dest: /www/
 
-        - name: Copy phpBB to root to avoid ugly /phpBB3 path
+        - name: Copy phpBB to target destination folder
           ansible.builtin.copy:
             remote_src: true
             src: /www/phpBB3/
-            dest: /www/
+            dest: "/www/{{ h_forum_dir_name }}"
 
         - name: Remove phpbb src
           ansible.builtin.file:
@@ -259,27 +259,27 @@
         - name: Retrieve American English Language Pack for phpBB3
           ansible.builtin.get_url:
             url: "{{ h_phpbb_lang_url }}"
-            dest: /www/american_english_4_14_0.zip
+            dest: "/www/{{ h_forum_dir_name }}/american_english_4_14_0.zip"
           
         - name: Unzip language pack
           ansible.builtin.unarchive:
             remote_src: true
-            src: /www/american_english_4_14_0.zip
-            dest: /www/
+            src: "/www/{{ h_forum_dir_name }}/american_english_4_14_0.zip"
+            dest: /www/{{ h_forum_dir_name }}/
 
         - name: Install language pack
           ansible.builtin.copy:
             remote_src: true
-            src: /www/american_english_4_14_0/
-            dest: /www/
+            src: "/www/{{ h_forum_dir_name }}/american_english_4_14_0/"
+            dest: /www/{{ h_forum_dir_name }}/
 
         - name: Remove language pack src
           ansible.builtin.file:
             path: "{{ item }}"
             state: absent
           loop:
-            - /www/american_english_4_14_0/ 
-            - /www/american_english_4_14_0.zip
+            - "/www/{{ h_forum_dir_name }}/american_english_4_14_0/"
+            - "/www/{{ h_forum_dir_name }}/american_english_4_14_0.zip"
           
         - name: Finalize permissions of www
           ansible.builtin.file:
@@ -288,6 +288,13 @@
             group: www-data
             mode: '2770'
             recurse: true
+
+    # ------------------------------------------------------
+
+    # ------------------------------------------------------
+    # - name: GRAV SETUP BLOCK
+    #   block:
+
 
     # ------------------------------------------------------
 
