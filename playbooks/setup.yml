@@ -179,9 +179,12 @@
             name: "{{ item }}"
           loop:
             - php-fpm # fpm version used with lighttpd
-            - php-xml
-            - php-mbstring
-            - php-pgsql
+            - php-xml # for phpbb
+            - php-mbstring # for phpbb
+            - php-pgsql # for phpbb
+            - php-curl # for grav
+            - php-gd # for grav
+            - php-zip # for grav
 
         # - name: Configure php with sane defaults for 2gb system, memory limits, file upload limits, et.
 
@@ -300,16 +303,47 @@
               dest: /www/grav.zip
               mode: '0755'
 
-          - name: Install grav
+          - name: Unzip grav
             ansible.builtin.unarchive:
               remote_src: true
               src: /www/grav.zip
               dest: /www/
 
+          - name: Install grav
+            ansible.builtin.copy:
+              remote_src: true
+              src: /www/grav-admin/
+              dest: /www/
+
           - name: Clear grav src
             ansible.builtin.file:
-              path: /www/grav.zip
+              path: "{{ item }}"
               state: absent
+            loop:
+              - /www/grav.zip
+              - /www/grav-admin/
+
+          - name: Retrieve latest grav lighttpd conf 
+            ansible.builtin.get_url:
+              url: https://raw.githubusercontent.com/getgrav/grav/refs/heads/master/webserver-configs/lighttpd.conf
+              dest: /tmp/grav-lighttpd.conf
+              mode: '0755'
+
+          - name: Set webroot in grav lighttpd conf
+            ansible.builtin.replace:
+              regexp: '/grav_path/' # replace slashes as well
+              replace: '' # empty is root
+              after: "### GRAV RULES.*"
+              path: /tmp/grav-lighttpd.conf
+
+          - name: Append grav lighttpd conf to existing conf
+            ansible.builtin.shell:
+              cmd: "cat /tmp/grav-lighttpd.conf >> /etc/lighttpd/lighttpd.conf"
+
+          - name: Confirm we did not mangle the lighttpd conf - restart lighttpd
+            ansible.builtin.service:
+              name: lighttpd
+              state: restarted
 
           - name: Finalize permissions of www
             ansible.builtin.file:
