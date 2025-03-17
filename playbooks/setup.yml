@@ -12,7 +12,6 @@
     - name: INITIAL SETUP BLOCK
       block:
 
-        # TODO set central timezone and sync time
         - name: Set TZ
           community.general.timezone:
             name: "{{ h_tz }}"
@@ -241,11 +240,11 @@
             src: /www/phpbb.zip
             dest: /www/
 
-        - name: Copy phpBB to target destination folder
+        - name: Copy phpBB to target forum root
           ansible.builtin.copy:
             remote_src: true
             src: /www/phpBB3/
-            dest: "/www/{{ h_forum_dir_name }}"
+            dest: "/www/{{ h_forum_dir_name }}/"
 
         - name: Remove phpbb src
           ansible.builtin.file:
@@ -255,21 +254,21 @@
             - /www/phpbb.zip
             - /www/phpBB3
 
-        # TODO maybe this 4140 should be a variable
         - name: Retrieve American English Language Pack for phpBB3
           ansible.builtin.get_url:
             url: "{{ h_phpbb_lang_url }}"
-            dest: "/www/{{ h_forum_dir_name }}/american_english_4_14_0.zip"
+            dest: "/tmp/en_us.zip"
           
         - name: Unzip language pack
           ansible.builtin.unarchive:
             remote_src: true
-            src: "/www/{{ h_forum_dir_name }}/american_english_4_14_0.zip"
+            src: "/tmp/en_us.zip"
             dest: /www/{{ h_forum_dir_name }}/
 
-        - name: Install language pack
+        - name: Install language pack to forum root
           ansible.builtin.copy:
             remote_src: true
+            # TODO predict this folder name or just somehow extract from under it
             src: "/www/{{ h_forum_dir_name }}/american_english_4_14_0/"
             dest: /www/{{ h_forum_dir_name }}/
 
@@ -279,7 +278,7 @@
             state: absent
           loop:
             - "/www/{{ h_forum_dir_name }}/american_english_4_14_0/"
-            - "/www/{{ h_forum_dir_name }}/american_english_4_14_0.zip"
+            - "/tmp/en_us.zip"
           
         - name: Finalize permissions of www
           ansible.builtin.file:
@@ -292,9 +291,33 @@
     # ------------------------------------------------------
 
     # ------------------------------------------------------
-    # - name: GRAV SETUP BLOCK
-    #   block:
+    - name: GRAV SETUP BLOCK
+      block:
 
+          - name: Retrieve grav-admin
+            ansible.builtin.get_url:
+              url: https://getgrav.org/download/core/grav-admin/latest
+              dest: /www/grav.zip
+              mode: '0755'
+
+          - name: Install grav
+            ansible.builtin.unarchive:
+              remote_src: true
+              src: /www/grav.zip
+              dest: /www/
+
+          - name: Clear grav src
+            ansible.builtin.file:
+              path: /www/grav.zip
+              state: absent
+
+          - name: Finalize permissions of www
+            ansible.builtin.file:
+              path: /var/www/html
+              owner: www-data
+              group: www-data
+              mode: '2770'
+              recurse: true
 
     # ------------------------------------------------------
 
