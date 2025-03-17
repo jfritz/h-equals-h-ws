@@ -310,7 +310,7 @@
             ansible.builtin.copy:
               remote_src: true
               src: /www/grav-admin/
-              dest: /www/
+              dest: /www/grav_path/ # DEBUG
 
           - name: Clear grav src
             ansible.builtin.file:
@@ -326,16 +326,21 @@
               dest: /tmp/grav-lighttpd.conf
               mode: '0755'
 
-          - name: Set webroot in grav lighttpd conf
-            ansible.builtin.replace:
-              regexp: '/grav_path/' # replace slashes as well
-              replace: '' # empty is root
-              after: "### GRAV RULES.*"
-              path: /tmp/grav-lighttpd.conf
+          # - name: Set webroot in grav lighttpd conf
+          #   ansible.builtin.replace:
+          #     path: /tmp/grav-lighttpd.conf
+          #     regexp: "{{ item }}"
+          #     replace: '' # empty is root
+          #   loop:
+          #     - '/grav_path/' # yes replace the slashes as well
+          #     - '/grav_path'
 
-          - name: Append grav lighttpd conf to existing conf
-            ansible.builtin.shell:
-              cmd: "cat /tmp/grav-lighttpd.conf >> /etc/lighttpd/lighttpd.conf"
+          # TODO link instead of cop
+          - name: Add conf to lighttpd
+            ansible.builtin.copy:
+              remote_src: true
+              src: /tmp/grav-lighttpd.conf
+              dest: /etc/lighttpd/conf-enabled/0-grav.conf
 
           - name: Confirm we did not mangle the lighttpd conf - restart lighttpd
             ansible.builtin.service:
