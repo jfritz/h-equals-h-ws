@@ -139,16 +139,19 @@
         - name: Create system user for postgres user heqh_dbu
           ansible.builtin.user:
             name: heqh_dbu
-            shell: /usr/sbin/nologin
             password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
 
         - name: Create postgres user heqh_dbu
           become: true
           become_user: postgres
           ansible.builtin.command:
-            # pw hash is "md5" + md5("pw" + "username" as salt)
+            # to generrate this scram-sha-256:
+            # #> createuser -Pe foo # run as postgres
             cmd: >
-              psql -d postgres -c "CREATE ROLE heqh_dbu WITH PASSWORD 'md584a9cd3ec8cfb9d231867841b312c614';"
+              psql -d postgres -c 
+              "CREATE ROLE heqh_dbu PASSWORD
+               'SCRAM-SHA-256$4096:KpStDveuvP+TUUaDWRkYjg==$TK1lAVRehWiErMvvUOQ+f1+IyTZ2jlbhmO5KZTDYDFQ=:hIAXU9TMFKAty/Kg2FTOuaj8rh/k85RHE+9Fb08m3hE='
+               NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN;"
 
         - name: Create postgres db heqh_bbs for heqh_dbu
           become: true
@@ -166,6 +169,12 @@
 
             # TODO ensure user can only connect locally
             # TODO vaultify password and change it
+
+        - name: Configure postgres to allow and prioritize unix domain socket connections with scram-sha-256 auth
+          ansible.builtin.lineinfile:
+            path: /etc/postgresql/15/main/pg_hba.conf
+            line: "local  all  all  scram-sha-256 # for web server using unix domain socket conns"
+            insertbefore: '^.*local.*all.*all.*peer'
 
         - name: Enable and restart postgresql
           ansible.builtin.service:
