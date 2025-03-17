@@ -15,7 +15,7 @@
         # TODO set central timezone and sync time
         - name: Set TZ
           community.general.timezone:
-            name: America/Chicago
+            name: "{{ h_tz }}"
 
         - name: Set time syncing
           ansible.builtin.command:
@@ -28,8 +28,7 @@
         - name: Set static ip FQDN hostname in hosts
           ansible.builtin.lineinfile:
             path: /etc/hosts
-            # TODO retrieve static IP
-            line: "127.0.1.1 h-equals-h.com h-equals-h"
+            line: "{{ h_static_ip }} {{ h_fqdn }} {{ h_hostname }}"
 
         - name: Update software
           ansible.builtin.apt:
@@ -39,14 +38,11 @@
         - name: Configure root pw
           ansible.builtin.user:
             name: root
-            # TODO change later
-            # generated with mkpasswd --method=sha-512 `apt install whois`
-            # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
-            password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
+            password: "{{ h_root_pw_hash }}"
 
         - name: Configure basic user
           ansible.builtin.user:
-            name: jfritz
+            name: "{{ h_admin_user_name }}"
             groups: 
               - sudo 
               - www-data
@@ -54,12 +50,12 @@
             # TODO change later
             # generated with mkpasswd --method=sha-512 `apt install whois`
             # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
-            password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
+            password: "{{ h_admin_user_pw_hash }}"
 
         - name: Basic user env
           ansible.builtin.lineinfile:
             line: "alias ll=\"ls -ahl --color\""
-            path: /home/jfritz/.bashrc
+            path: "/home/{{ h_admin_user_name }}/.bashrc"
 
         - name: See if ec2-user and key exists
           stat: path=/home/ec2-user/.ssh
@@ -70,9 +66,9 @@
           ansible.builtin.copy:
             remote_src: true
             src: /home/ec2-user/.ssh
-            dest: /home/jfritz/.ssh
-            owner: jfritz
-            group: jfritz
+            dest: "/home/{{ h_admin_user_name }}/.ssh"
+            owner: "{{ h_admin_user_name }}"
+            group: "{{ h_admin_user_name }}"
           when: stat_result.stat.isdir|d(False)
         
         - name: Remove ec2-user
@@ -131,43 +127,38 @@
         - name: Set postgres system user pw
           ansible.builtin.user:
             name: postgres
-            # TODO change later
-            # generated with mkpasswd --method=sha-512 `apt install whois`
-            # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
-            password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
+            password: "{{ h_postgres_user_pw_hash }}"
 
-        - name: Create system user for postgres user heqh_dbu
+        - name: Create system user for db user 
           ansible.builtin.user:
-            name: heqh_dbu
-            password: "$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1"
+            name: "{{ h_db_user_name }}"
+            password: "{{ h_db_user_pw_hash }}"
 
-        - name: Create postgres user heqh_dbu
+        - name: Create postgres db user
           become: true
           become_user: postgres
           ansible.builtin.command:
-            # to generrate this scram-sha-256:
-            # #> createuser -Pe foo # run as postgres
             cmd: >
               psql -d postgres -c 
-              "CREATE ROLE heqh_dbu PASSWORD
-               'SCRAM-SHA-256$4096:KpStDveuvP+TUUaDWRkYjg==$TK1lAVRehWiErMvvUOQ+f1+IyTZ2jlbhmO5KZTDYDFQ=:hIAXU9TMFKAty/Kg2FTOuaj8rh/k85RHE+9Fb08m3hE='
+              "CREATE ROLE {{ h_db_user_name }} PASSWORD
+               '{{ h_db_user_pg_pw_hash }}'
                NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN;"
 
-        - name: Create postgres db heqh_bbs for heqh_dbu
+        - name: Create postgres db 
           become: true
           become_user: postgres
           ansible.builtin.command:
-            cmd: "createdb -O heqh_dbu heqh_bbs"
+            cmd: "createdb -O {{ h_db_user_name }} {{ h_db_name }}"
 
-        - name: Grant privs on postgres user heqh_dbu against heqh_bbs
+        - name: Grant privs on postgres user against db
           become: true
           become_user: postgres
           ansible.builtin.command:
             cmd: >
-              psql -d postgres -c 'ALTER ROLE heqh_dbu LOGIN; GRANT CONNECT, CREATE ON DATABASE heqh_bbs TO heqh_dbu;'
+              psql -d postgres -c 'ALTER ROLE {{ h_db_user_name }} LOGIN; 
+              GRANT CONNECT, CREATE ON DATABASE {{ h_db_name }} TO {{ h_db_user_name }};'
 
             # TODO ensure user can only connect locally
-            # TODO vaultify password and change it
 
         - name: Configure postgres to allow and prioritize unix domain socket connections with scram-sha-256 auth
           ansible.builtin.lineinfile:
@@ -243,7 +234,7 @@
 
         - name: Retrieve phpBB
           ansible.builtin.get_url:
-            url: https://download.phpbb.com/pub/release/3.3/3.3.14/phpBB-3.3.14.zip
+            url: "{{ h_phpbb_url }}"
             dest: /www/phpbb.zip
             mode: '0755'
           
@@ -267,9 +258,10 @@
             - /www/phpbb.zip
             - /www/phpBB3
 
+        # TODO maybe this 4140 should be a variable
         - name: Retrieve American English Language Pack for phpBB3
           ansible.builtin.get_url:
-            url: https://www.phpbb.com/customise/db/download/208693
+            url: "{{ h_phpbb_lang_url }}"
             dest: /www/american_english_4_14_0.zip
           
         - name: Unzip language pack
