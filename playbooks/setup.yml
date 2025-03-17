@@ -47,9 +47,6 @@
               - sudo 
               - www-data
             shell: /bin/bash
-            # TODO change later
-            # generated with mkpasswd --method=sha-512 `apt install whois`
-            # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
             password: "{{ h_admin_user_pw_hash }}"
 
         - name: Basic user env

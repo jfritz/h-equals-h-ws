@@ -1,1 +1,28 @@
-h-equals-h.com ansible_connection=ssh ansible_user=root ansible_ssh_pass=password
+[prod]
+192.168.64.4
+
+[prod:vars]
+ansible_connection=ssh 
+ansible_user=root 
+ansible_ssh_pass=password
+h_tz=America/Chicago
+
+# generated with mkpasswd --method=sha-512 `apt install whois`
+# https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
+h_root_pw_hash=$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1
+h_admin_user_name=jfritz
+h_admin_user_pw_hash=$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1
+h_postgres_user_pw_hash=$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1
+h_db_user_name=heqh_dbu
+h_db_user_pw_hash=$6$VdpunU2oUPXYXIQc$NV6jkf6Q9kuE6.Ou3Bqbw97nIVziSws7aUfxiYdUfCdX99FHJzXpVsxQWRToRMkVURXnEWRP39yJsSpX4xQpu1
+
+# to generrate this scram-sha-256:
+# #> createuser -Pe foo # run as postgres, user must not exist already
+h_db_user_pg_pw_hash=SCRAM-SHA-256$4096:KpStDveuvP+TUUaDWRkYjg==$TK1lAVRehWiErMvvUOQ+f1+IyTZ2jlbhmO5KZTDYDFQ=:hIAXU9TMFKAty/Kg2FTOuaj8rh/k85RHE+9Fb08m3hE=
+h_db_name=heqh_bbs
+h_static_ip=192.168.64.4
+h_hostname=h-equals-h
+h_fqdn=h-equals-h.com
+h_phpbb_url=https://download.phpbb.com/pub/release/3.3/3.3.14/phpBB-3.3.14.zip
+# american english 4.14.0 for 3.3.14
+h_phpbb_lang_url=https://www.phpbb.com/customise/db/download/208693 

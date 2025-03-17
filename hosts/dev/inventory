@@ -24,4 +24,5 @@ h_static_ip=192.168.64.4
 h_hostname=h-equals-h
 h_fqdn=h-equals-h.com
 h_phpbb_url=https://download.phpbb.com/pub/release/3.3/3.3.14/phpBB-3.3.14.zip
-h_phpbb_lang_url=https://www.phpbb.com/customise/db/download/208693 # 4.14.0 for 3.3.14
+# american english 4.14.0 for 3.3.14
+h_phpbb_lang_url=https://www.phpbb.com/customise/db/download/208693 

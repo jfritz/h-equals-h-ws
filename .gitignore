@@ -23,3 +23,6 @@ collections/ansible_collections
 .python-version
 .vscode
 .DS_Store
+
+# prod config
+hosts/prod/inventory
