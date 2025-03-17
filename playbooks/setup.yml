@@ -76,20 +76,19 @@
 
         - name: Install base OS utilities 
           ansible.builtin.apt:
-            name: "{{ item }}"
-          loop:
-            - sudo
-            - unzip
-            - screen
-            - htop
-            - git
-            - vim
-            - openssl
-            # - iptables # firewalld?
-            - tree
-            - curl
-            - whois
-            - cockpit
+            name: 
+              - sudo
+              - unzip
+              - screen
+              - htop
+              - git
+              - vim
+              - openssl
+              # - iptables # firewalld?
+              - tree
+              - curl
+              - whois
+              - cockpit
 
         - name: Configure sudo
           community.general.sudoers:
@@ -115,10 +114,9 @@
         - name: Retrieve and install pgsql
           ansible.builtin.apt:
             update_cache: true
-            name: "{{ item }}"
-          loop:
-            - "postgresql"
-            - "postgresql-client"
+            name: 
+              - "postgresql"
+              - "postgresql-client"
           
         - name: Set postgres system user pw
           ansible.builtin.user:
@@ -176,15 +174,14 @@
         - name: Retrieve and install php
           ansible.builtin.apt:
             update_cache: true
-            name: "{{ item }}"
-          loop:
-            - php-fpm # fpm version used with lighttpd
-            - php-xml # for phpbb
-            - php-mbstring # for phpbb
-            - php-pgsql # for phpbb
-            - php-curl # for grav
-            - php-gd # for grav
-            - php-zip # for grav
+            name: 
+              - php-fpm # fpm version used with lighttpd
+              - php-xml # for phpbb
+              - php-mbstring # for phpbb
+              - php-pgsql # for phpbb
+              - php-curl # for grav
+              - php-gd # for grav
+              - php-zip # for grav
 
         # - name: Configure php with sane defaults for 2gb system, memory limits, file upload limits, et.
 
