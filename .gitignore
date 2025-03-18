@@ -11,7 +11,7 @@ facts.d
 *.log
 # add local roles but ignore everything else
 roles/*
-!roles/mylocalrole
+!roles/fix-grav-conf
 !roles/requirements.yml
 collections/ansible_collections
 .ansible
