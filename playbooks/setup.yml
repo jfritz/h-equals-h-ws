@@ -330,8 +330,9 @@
             # https://github.com/getgrav/grav/issues/1876
             ansible.builtin.replace:
               path: /etc/lighttpd/conf-available/02-grav.conf
-              regexp: '"index.php'
+              regexp: '"index.php?'
               replace: '"/index.php'
+            tags: debug
 
           - name: Add mod_rewrite enabled to conf-available
             ansible.builtin.copy:
