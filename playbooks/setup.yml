@@ -323,7 +323,14 @@
           - name: Retrieve latest grav lighttpd conf 
             ansible.builtin.get_url:
               url: https://raw.githubusercontent.com/getgrav/grav/refs/heads/master/webserver-configs/lighttpd.conf
-              dest: /tmp/grav-lighttpd.conf
+              dest: /etc/lighttpd/conf-available/02-grav.conf
+              mode: '0755'
+
+          - name: Add mod_rewrite enabled to conf-available
+            ansible.builtin.copy:
+              content: >
+                server.modules += ("mod_rewrite")
+              dest: /etc/lighttpd/conf-available/01-enable-mod-rw.conf
               mode: '0755'
 
           # - name: Set webroot in grav lighttpd conf
@@ -335,12 +342,14 @@
           #     - '/grav_path/' # yes replace the slashes as well
           #     - '/grav_path'
 
-          # TODO link instead of cop
-          - name: Add conf to lighttpd
-            ansible.builtin.copy:
-              remote_src: true
-              src: /tmp/grav-lighttpd.conf
-              dest: /etc/lighttpd/conf-enabled/0-grav.conf
+          - name: Link confs to lighttpd
+            ansible.builtin.file:
+              src: "{{ item }}"
+              dest: "/etc/lighttpd/conf-enabled/{{ item | basename }}"
+              state: link
+            loop:
+              - /etc/lighttpd/conf-available/01-enable-mod-rw.conf
+              - /etc/lighttpd/conf-available/02-grav.conf
 
           - name: Confirm we did not mangle the lighttpd conf - restart lighttpd
             ansible.builtin.service:
