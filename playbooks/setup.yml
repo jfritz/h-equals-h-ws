@@ -310,7 +310,7 @@
             ansible.builtin.copy:
               remote_src: true
               src: /www/grav-admin/
-              dest: /www/grav_path/ # DEBUG
+              dest: /www/ # grav_path DEBUG
 
           - name: Clear grav src
             ansible.builtin.file:
@@ -326,6 +326,13 @@
               dest: /etc/lighttpd/conf-available/02-grav.conf
               mode: '0755'
 
+          - name: Fix grav conf bug with rewrites
+            # https://github.com/getgrav/grav/issues/1876
+            ansible.builtin.replace:
+              path: /etc/lighttpd/conf-available/02-grav.conf
+              regexp: '"index.php'
+              replace: '"/index.php'
+
           - name: Add mod_rewrite enabled to conf-available
             ansible.builtin.copy:
               content: >
@@ -333,14 +340,14 @@
               dest: /etc/lighttpd/conf-available/01-enable-mod-rw.conf
               mode: '0755'
 
-          # - name: Set webroot in grav lighttpd conf
-          #   ansible.builtin.replace:
-          #     path: /tmp/grav-lighttpd.conf
-          #     regexp: "{{ item }}"
-          #     replace: '' # empty is root
-          #   loop:
-          #     - '/grav_path/' # yes replace the slashes as well
-          #     - '/grav_path'
+          - name: Set webroot in grav lighttpd conf
+            ansible.builtin.replace:
+              path: /etc/lighttpd/conf-available/02-grav.conf
+              regexp: "{{ item }}"
+              replace: '' # empty is root
+            loop:
+              - '/grav_path/' # yes replace the slashes as well
+              - '/grav_path'
 
           - name: Link confs to lighttpd
             ansible.builtin.file:
