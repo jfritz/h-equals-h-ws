@@ -26,4 +26,6 @@ h_fqdn=h-equals-h.com
 h_phpbb_url=https://download.phpbb.com/pub/release/3.3/3.3.14/phpBB-3.3.14.zip
 # american english 4.14.0 for 3.3.14
 h_phpbb_lang_url=https://www.phpbb.com/customise/db/download/208693 
+
+# TODO this must be forum for 02 grav cconf
 h_forum_dir_name="forum"

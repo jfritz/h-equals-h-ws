@@ -320,35 +320,12 @@
               - /www/grav.zip
               - /www/grav-admin/
 
-          - name: Retrieve latest grav lighttpd conf 
-            ansible.builtin.get_url:
-              url: https://raw.githubusercontent.com/getgrav/grav/refs/heads/master/webserver-configs/lighttpd.conf
+          - name: Lay down custom grav conf
+            ansible.builtin.copy:
+              src: ../roles/fix-grav-conf/files/02-grav.conf
               dest: /etc/lighttpd/conf-available/02-grav.conf
               mode: '0755'
-
-          - name: Fix grav conf bug with rewrites
-            # https://github.com/getgrav/grav/issues/1876
-            ansible.builtin.replace:
-              path: /etc/lighttpd/conf-available/02-grav.conf
-              regexp: '"index.php?'
-              replace: '"/index.php'
-            tags: debug
-
-          - name: Add mod_rewrite enabled to conf-available
-            ansible.builtin.copy:
-              content: >
-                server.modules += ("mod_rewrite")
-              dest: /etc/lighttpd/conf-available/01-enable-mod-rw.conf
-              mode: '0755'
-
-          - name: Set webroot in grav lighttpd conf
-            ansible.builtin.replace:
-              path: /etc/lighttpd/conf-available/02-grav.conf
-              regexp: "{{ item }}"
-              replace: '' # empty is root
-            loop:
-              - '/grav_path/' # yes replace the slashes as well
-              - '/grav_path'
+            tags: webconf
 
           - name: Link confs to lighttpd
             ansible.builtin.file:
@@ -356,13 +333,14 @@
               dest: "/etc/lighttpd/conf-enabled/{{ item | basename }}"
               state: link
             loop:
-              - /etc/lighttpd/conf-available/01-enable-mod-rw.conf
               - /etc/lighttpd/conf-available/02-grav.conf
+            tags: webconf
 
           - name: Confirm we did not mangle the lighttpd conf - restart lighttpd
             ansible.builtin.service:
               name: lighttpd
               state: restarted
+            tags: webconf
 
           - name: Finalize permissions of www
             ansible.builtin.file:
