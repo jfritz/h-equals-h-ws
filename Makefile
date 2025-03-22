@@ -60,15 +60,28 @@ endif
 # TODO make infra-template and implement make template?
 # TODO make load-test
 
-# Make infra - launch ec2 instance from template 
-.PHONY: infra
-infra:
-	aws ec2 run-instances --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=h-equals-h-ws}]' --launch-template LaunchTemplateName=h-equals-h-uat-templ
+# Make build-infra - launch ec2 instance from template and log current aws instance.
+.PHONY: build-infra
+build-infra:
+	aws ec2 run-instances \
+	--tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=h-equals-h-ws}]' \
+	--launch-template LaunchTemplateName=h-equals-h-uat-templ --output json | \
+	grep InstanceId | cut -d ":" -f2 | cut -d "\"" -f2 > $(mkfile_dir)/.aws_instance_id
+	@cat $(mkfile_dir)/.aws_instance_id
+#             "InstanceId": "i-0efeae13e56df1064",
+
+# Make clean-infra - destroy ec2 instance (configure to destroy EBS as well)
+.PHONY: clean-infra
+clean-infra:
+	aws ec2 terminate-instances --instance-ids $(shell cat $(mkfile_dir)/.aws_instance_id)
 
 #  Make update-prod-ip-config
 #  Needs instance_id=DATA make update-prod-ip-config
 .PHONY: update-prod-ip-config
 update-prod-ip-config:
+	cd $(mkfile_dir)
+	$(eval instance_id = $(shell cat .aws_instance_id))
+	@echo $(instance_id)
 	$(eval heqh_pub_ip = $(shell aws ec2 describe-instances --instance-ids $(instance_id) --query 'Reservations[*].Instances[*].PublicIpAddress' --output text))
 	sed -i '.bak' -r 's/^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/$(heqh_pub_ip)/g' hosts/prod/inventory 
 	@head -n2 hosts/prod/inventory
@@ -82,6 +95,11 @@ prod:
 .PHONY: dev
 dev:
 	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/dev/inventory setup.yml
+
+# make debug - use this for random testing
+.PHONY: debug
+debug:
+	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/prod/inventory -t db setup.yml
 
 # .PHONY: install
 # install: ## make install [roles_path=roles/] # Install roles dependencies

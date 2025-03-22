@@ -137,6 +137,8 @@
             - dbu_create.rc != 0  
             # Ignore if user already exists
             - '"already exists" not in dbu_create.stderr' 
+          tags:
+            - db
 
         - name: Create postgres db 
           become: true
@@ -148,6 +150,8 @@
             - db_create.rc != 0  
             # Ignore if user already exists
             - '"already exists" not in db_create.stderr' 
+          tags:
+            - db
 
         - name: Grant privs on postgres user against db
           become: true
@@ -156,6 +160,8 @@
             cmd: >
               psql -d postgres -c 'ALTER ROLE {{ h_db_user_name }} LOGIN; 
               GRANT CONNECT, CREATE ON DATABASE {{ h_db_name }} TO {{ h_db_user_name }};'
+          tags: 
+            - db
 
             # TODO ensure user can only connect locally
 
