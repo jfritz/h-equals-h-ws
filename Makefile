@@ -57,6 +57,9 @@ endif
 # https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-short-term.html
 # needs ~/.aws/credentials
 
+# TODO make infra-template and implement make template?
+# TODO make load-test
+
 # Make infra - launch ec2 instance from template 
 .PHONY: infra
 infra:
@@ -67,7 +70,7 @@ infra:
 .PHONY: update-prod-ip-config
 update-prod-ip-config:
 	$(eval heqh_pub_ip = $(shell aws ec2 describe-instances --instance-ids $(instance_id) --query 'Reservations[*].Instances[*].PublicIpAddress' --output text))
-	sed -ir 's/.*\..*\..*\..*/$(heqh_pub_ip)/g' hosts/prod/inventory
+	sed -i '.bak' -r 's/^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/$(heqh_pub_ip)/g' hosts/prod/inventory 
 	@head -n2 hosts/prod/inventory
 
 # Make prod - deploy ansible to prod

@@ -25,4 +25,5 @@ collections/ansible_collections
 .DS_Store
 
 # prod config
+hosts/prod/*
 hosts/prod/inventory
