@@ -57,7 +57,7 @@ endif
 # https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-short-term.html
 # needs ~/.aws/credentials
 
-# Make infra - launch ec2 instance from template need IP back
+# Make infra - launch ec2 instance from template 
 .PHONY: infra
 infra:
 	aws ec2 run-instances --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=h-equals-h-ws}]' --launch-template LaunchTemplateName=h-equals-h-uat-templ
@@ -66,14 +66,19 @@ infra:
 #  Needs instance_id=DATA make update-prod-ip-config
 .PHONY: update-prod-ip-config
 update-prod-ip-config:
-	heqh_pub_ip=$(aws ec2 describe-instances --instance-ids $(instance_id) --query 'Reservations[*].Instances[*].PublicIpAddress' --output text) 
-	sed -i 's/%PUBLIC_IP%/$(heqh_pub_ip)/g' hosts/prod/inventory
-	echo $(heqh_pub_ip)
+	$(eval heqh_pub_ip = $(shell aws ec2 describe-instances --instance-ids $(instance_id) --query 'Reservations[*].Instances[*].PublicIpAddress' --output text))
+	sed -ir 's/.*\..*\..*\..*/$(heqh_pub_ip)/g' hosts/prod/inventory
+	@head -n2 hosts/prod/inventory
 
 # Make prod - deploy ansible to prod
 .PHONY: prod
 prod:
 	cd $(mkfile_dir)/playbooks && ansible-playbook -i ../hosts/prod/inventory setup.yml
+
+# Make dev - deploy ansible to dev
+.PHONY: dev
+dev:
+	cd $(mkfile_dir)/playbooks && ansible-playbook -i ../hosts/dev/inventory setup.yml
 
 # .PHONY: install
 # install: ## make install [roles_path=roles/] # Install roles dependencies
