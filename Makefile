@@ -76,12 +76,12 @@ update-prod-ip-config:
 # Make prod - deploy ansible to prod
 .PHONY: prod
 prod:
-	cd $(mkfile_dir)/playbooks && ansible-playbook -i ../hosts/prod/inventory setup.yml
+	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/prod/inventory setup.yml
 
 # Make dev - deploy ansible to dev
 .PHONY: dev
 dev:
-	cd $(mkfile_dir)/playbooks && ansible-playbook -i ../hosts/dev/inventory setup.yml
+	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/dev/inventory setup.yml
 
 # .PHONY: install
 # install: ## make install [roles_path=roles/] # Install roles dependencies

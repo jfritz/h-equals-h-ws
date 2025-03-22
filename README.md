@@ -10,3 +10,5 @@
 
 Follow instructions at all steps to update $PATH
 
+6. Install aws cli v2
+7. Authenticate using .aws/credentials with key made on IAM user in AWS console

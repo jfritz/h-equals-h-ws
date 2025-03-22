@@ -208,6 +208,11 @@
         - name: Configure httpd for php, must have php-fpm installed
           ansible.builtin.command:
             cmd: lighty-enable-mod fastcgi-php-fpm 
+          register: lighty_result
+          failed_when: 
+            - lighty_result.rc != 0
+            # Ignore if user already exists
+            - '"already enabled" not in lighty_result.stdout' 
 
         - name: Link /www to /var/www/html for convenience
           ansible.builtin.file:
