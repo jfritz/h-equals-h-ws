@@ -62,6 +62,7 @@ endif
 # TODO make open-cockpit-ports / close-cockpit-ports # open/close on security group for my IP
 # TODO make open-ssh-ports / close-ssh-ports # open/close on security group for my IP
 # TODO make reassociate-elastic-ip # re assigns elastic IP to the network adapter on the instance
+# TODO make export-certs / import-certs # /etc/letsencrypt/live/h-equals-h.com/fullchain,privkey.pem
 
 # Make build-infra - launch ec2 instance from template and log current aws instance., creates .aws_instance_id
 .PHONY: build-infra

@@ -81,6 +81,7 @@
               - whois # for generating passwords
               - cockpit
               - lsof # for debug
+              - certbot # for ssl cert sign
 
         - name: Create cockpit conf dir
           ansible.builtin.file:
@@ -109,7 +110,7 @@
 
         - name: Enable and restart cockpit
           ansible.builtin.service:
-            name: "{{ name }}"
+            name: "{{ item }}"
             state: restarted
             enabled: true
           loop:

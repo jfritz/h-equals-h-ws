@@ -34,3 +34,7 @@ or
  1. make build-infra
  2. make update-prod
  3. make prod
+
+ ### Production HTTPS Cert Setup
+ See https://wiki.debian.org/Lighttpd#SSL.2FTLS_.28HTTPS.29
+ TODO once done, save off certs for future import in case of server rebuild. if you need to rebuild you'll have to reupdate TXT records in DNS route53
