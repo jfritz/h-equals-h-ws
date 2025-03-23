@@ -71,25 +71,50 @@
         - name: Install base OS utilities 
           ansible.builtin.apt:
             name: 
-              - acl # TODO REMOVE - only needed for ansible elevation to non priv user (postgres)
+              - acl # helper for ansible elevation to non priv user (postgres)
               - sudo
               - unzip
-              - screen
-              - htop
-              - git
               - vim
               - openssl
-              # - iptables # firewalld?
               - tree
               - curl
-              - whois
+              - whois # for generating passwords
               - cockpit
+              - lsof # for debug
 
-        - name: Enable cockpit
+        - name: Create cockpit conf dir
+          ansible.builtin.file:
+            path: /etc/systemd/system/cockpit.socket.d/
+            state: directory
+            owner: 'root'
+            group: 'root'
+            mode: '0755'
+
+        - name: Set cockpit to custom port
+          ansible.builtin.copy:
+            dest: /etc/systemd/system/cockpit.socket.d/listen.conf
+            # Empty ListenStream is required to disable 9090
+            content: |
+              [Socket]
+              ListenStream=
+              ListenStream=8718
+              FreeBind=yes
+            owner: 'root'
+            group: 'root'
+            mode: '0755'
+
+        - name: Reload systemd daemons
+          ansible.builtin.systemd_service:
+            daemon_reload: true
+
+        - name: Enable and restart cockpit
           ansible.builtin.service:
-            name: cockpit
-            state: started
+            name: "{{ name }}"
+            state: restarted
             enabled: true
+          loop:
+            - cockpit
+            - cockpit.socket
 
         - name: Configure sudo
           community.general.sudoers:
@@ -437,11 +462,11 @@
     - name: Echo paths 
       ansible.builtin.debug:
         msg: |
-          COCKPIT: http://{{ ansible_host }}:9090
+          COCKPIT: http://{{ ansible_host }}:8718
           ROOT:    http://{{ ansible_host }}
           FORUM:   http://{{ ansible_host }}/{{ h_forum_dir_name }}
           ---
-          COCKPIT: http://{{ h_fqdn }}:9090
+          COCKPIT: http://{{ h_fqdn }}:8718
           ROOT:    http://{{ h_fqdn }}
           FORUM:   http://{{ h_fqdn }}/{{ h_forum_dir_name }}
 

@@ -1,8 +1,6 @@
 # h-equals-h website Ansible build
 
-
 ## Dev Environment Setup
-
 
 ### MacOS
 1. Install homebrew
@@ -25,7 +23,7 @@ NOTE: Only prod builds use aws. Local builds assume local debian VM is running a
 1. Proper DNS config in Route 53 and your domain name registrar
 1. Production/dev inventories set up for ansible
 
-### Quick Start
+### Running Builds
 
  After you have the requirements set up above:
 
