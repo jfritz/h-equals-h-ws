@@ -57,10 +57,11 @@ endif
 # https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-short-term.html
 # needs ~/.aws/credentials
 
-# TODO make infra-template and implement make template?
+# TODO make infra-template # create default aws ec2 launch template
 # TODO make load-test
-# TODO make open-cockpit-ports / close-cockpit-ports
-# TODO make open-ssh-ports / close-ssh-ports
+# TODO make open-cockpit-ports / close-cockpit-ports # open/close on security group for my IP
+# TODO make open-ssh-ports / close-ssh-ports # open/close on security group for my IP
+# TODO make reassociate-elastic-ip # re assigns elastic IP to the network adapter on the instance
 
 # Make build-infra - launch ec2 instance from template and log current aws instance., creates .aws_instance_id
 .PHONY: build-infra

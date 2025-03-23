@@ -385,6 +385,7 @@
     # ------------------------------------------------------
 
     # ------------------------------------------------------
+    # For cockpit protection - ssh password auth is disabled by default
     - name: FAILLOCK SETUP BLOCK
       block:
         - name: Update /etc/pam.d/common-auth to inject faillock
@@ -439,5 +440,10 @@
           COCKPIT: http://{{ ansible_host }}:9090
           ROOT:    http://{{ ansible_host }}
           FORUM:   http://{{ ansible_host }}/{{ h_forum_dir_name }}
+          ---
+          COCKPIT: http://{{ h_fqdn }}:9090
+          ROOT:    http://{{ h_fqdn }}
+          FORUM:   http://{{ h_fqdn }}/{{ h_forum_dir_name }}
+
 
     # ------------------------------------------------------
