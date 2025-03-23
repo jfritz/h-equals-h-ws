@@ -102,20 +102,28 @@ export-certs:
 	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R admin $(certpath)" 
 	@sleep 2
 	scp -r -i $(keypath) admin@$(pub_ip):$(certpath) $(mkfile_dir)/certs
-	chmod -R 700 $(mkfile_dir)/certs
+	chmod -R 500 $(mkfile_dir)/certs
 	@sleep 2
 	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R root $(certpath)" 
+
+# TODO ansible update 10-ssl.conf
+# TODO ansible restart lighttpd/lighty-mod per instrs
+# TODO TEST ME ensure paths are right and install symlinks? or are they there already?
+# TODO certificate renewal automation
 
 #  Make import-certs - transfers SSL certs from local certs/*.pem to prod, restarts services
 .PHONY: import-certs
 import-certs:
-	$(eval certpath := /etc/letsencrypt/live/h-equals-h.com/)
+	$(eval certpath := /etc/letsencrypt/archive/)
 	$(eval pub_ip = $(shell cat .aws_public_ip))
 	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
-# Temporary so admin can write it
+# Temporary so admin can read it
 	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R admin $(certpath)" 
-	scp -i $(keypath) $(mkfile_dir)/certs/*.pem admin@$(pub_ip):$(certpath)
-	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R root $(certpath)" 
+	@sleep 2
+	scp -r -i $(keypath) admin@$(pub_ip):$(certpath) $(mkfile_dir)/certs
+	chmod -R 500 $(mkfile_dir)/certs
+	@sleep 2
+	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R root $(certpath) && sudo systemctl reload lighttpd" 
 
 # Make prod - deploy ansible to prod
 .PHONY: prod
