@@ -106,10 +106,16 @@ export-certs:
 	@sleep 2
 	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R root $(certpath)" 
 
+
+# ORDERED LIST DEBUG TODO 
+# TODO TEST ME mport-certs ensure paths are right and install symlinks? or are they there already?
+# TODO does importing certs even work to a new machine?
 # TODO ansible update 10-ssl.conf
 # TODO ansible restart lighttpd/lighty-mod per instrs
-# TODO TEST ME ensure paths are right and install symlinks? or are they there already?
 # TODO certificate renewal automation
+# TODO test build without certs
+# TODO launch template make command needs: debian 12, t2.micro, security group configurable, network IF configurable (linked to EIP)
+# TODO need elastic ip permanent on launch template somehow
 
 #  Make import-certs - transfers SSL certs from local certs/*.pem to prod, restarts services
 .PHONY: import-certs
