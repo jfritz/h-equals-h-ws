@@ -28,4 +28,4 @@ collections/ansible_collections
 hosts/prod/*
 hosts/prod/inventory
 *.bak
-.aws_instance_id
+.aws*
