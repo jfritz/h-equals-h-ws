@@ -121,6 +121,7 @@
         - name: Create system user for db user 
           ansible.builtin.user:
             name: "{{ h_db_user_name }}"
+            group: db-data
             password: "{{ h_db_user_pw_hash }}"
 
         - name: Create postgres db user
@@ -397,6 +398,11 @@
 
     # ------------------------------------------------------
     # - name: SUMMARY BLOCK
-    # - name: Echo path to phpbb URL for install
-    # - name: Echo path to cockpit
+    - name: Echo paths 
+      ansible.builtin.debug:
+        msg: |
+          COCKPIT: http://{{ ansible_host }}:9090
+          ROOT:    http://{{ ansible_host }}
+          FORUM:    http://{{ ansible_host }}/{{ h_forum_dir_name }}
+
     # ------------------------------------------------------

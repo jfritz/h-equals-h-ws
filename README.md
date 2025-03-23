@@ -15,7 +15,10 @@
 
  After you have the requirements set up above:
 
- 1. make infra
- 2. copy aws instance ID
- 3. instance_id=ID_HERE make update-prod-ip-config
- 4. make prod
+ 1. make dev
+
+or
+
+ 1. make build-infra
+ 2. make update-prod
+ 3. make prod

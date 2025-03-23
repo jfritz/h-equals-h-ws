@@ -60,7 +60,7 @@ endif
 # TODO make infra-template and implement make template?
 # TODO make load-test
 
-# Make build-infra - launch ec2 instance from template and log current aws instance.
+# Make build-infra - launch ec2 instance from template and log current aws instance., creates .aws_instance_id
 .PHONY: build-infra
 build-infra:
 	aws ec2 run-instances \
@@ -71,19 +71,21 @@ build-infra:
 #             "InstanceId": "i-0efeae13e56df1064",
 
 # Make clean-infra - destroy ec2 instance (configure to destroy EBS as well)
+# Don't run this after you go to production! Set termination protection on your prod instance
 .PHONY: clean-infra
 clean-infra:
 	aws ec2 terminate-instances --instance-ids $(shell cat $(mkfile_dir)/.aws_instance_id)
+	rm .aws_public_ip .aws_instance_id
 
-#  Make update-prod-ip-config
-#  Needs instance_id=DATA make update-prod-ip-config
-.PHONY: update-prod-ip-config
-update-prod-ip-config:
+#  Make update-prod - ensures prod ip is in prod inventory, creates .aws_public_ip
+.PHONY: update-prod
+update-prod:
 	cd $(mkfile_dir)
 	$(eval instance_id = $(shell cat .aws_instance_id))
 	@echo $(instance_id)
 	$(eval heqh_pub_ip = $(shell aws ec2 describe-instances --instance-ids $(instance_id) --query 'Reservations[*].Instances[*].PublicIpAddress' --output text))
 	sed -i '.bak' -r 's/^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/$(heqh_pub_ip)/g' hosts/prod/inventory 
+	echo $(heqh_pub_ip) > .aws_public_ip
 	@head -n2 hosts/prod/inventory
 
 # Make prod - deploy ansible to prod
@@ -95,6 +97,13 @@ prod:
 .PHONY: dev
 dev:
 	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/dev/inventory setup.yml
+
+# make ssh-prod - access prod via ssh
+.PHONY: ssh-prod
+ssh-prod:
+	$(eval pub_ip = $(shell cat .aws_public_ip))
+	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
+	ssh -i $(keypath) admin@$(pub_ip)
 
 # make debug - use this for random testing
 .PHONY: debug
