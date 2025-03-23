@@ -62,6 +62,17 @@
           when: h_admin_user_name
           # TODO ensure this user can't ssh - use cockpit to local ip only?
 
+        - name: Root user env
+          ansible.builtin.lineinfile:
+            line: "alias ll=\"ls -ahl --color\""
+            path: "/home/root/.bashrc"
+
+        - name: Root user env
+          ansible.builtin.lineinfile:
+            line: "alias ll=\"ls -ahl --color\""
+            path: "/home/admin/.bashrc"
+          failed_when: false # ignore if user doesn't exist - aws
+
         - name: Basic user env
           ansible.builtin.lineinfile:
             line: "alias ll=\"ls -ahl --color\""

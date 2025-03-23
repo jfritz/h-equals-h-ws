@@ -92,6 +92,31 @@ update-prod:
 	echo $(heqh_pub_ip) > .aws_public_ip
 	@head -n2 hosts/prod/inventory
 
+#  Make export-certs - transfers SSL certs from prod to local machine
+.PHONY: export-certs
+export-certs:
+	$(eval certpath := /etc/letsencrypt/archive/)
+	$(eval pub_ip = $(shell cat .aws_public_ip))
+	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
+# Temporary so admin can read it
+	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R admin $(certpath)" 
+	@sleep 2
+	scp -r -i $(keypath) admin@$(pub_ip):$(certpath) $(mkfile_dir)/certs
+	chmod -R 700 $(mkfile_dir)/certs
+	@sleep 2
+	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R root $(certpath)" 
+
+#  Make import-certs - transfers SSL certs from local certs/*.pem to prod, restarts services
+.PHONY: import-certs
+import-certs:
+	$(eval certpath := /etc/letsencrypt/live/h-equals-h.com/)
+	$(eval pub_ip = $(shell cat .aws_public_ip))
+	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
+# Temporary so admin can write it
+	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R admin $(certpath)" 
+	scp -i $(keypath) $(mkfile_dir)/certs/*.pem admin@$(pub_ip):$(certpath)
+	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R root $(certpath)" 
+
 # Make prod - deploy ansible to prod
 .PHONY: prod
 prod:

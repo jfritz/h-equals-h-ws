@@ -30,3 +30,4 @@ hosts/prod/inventory
 *.bak
 .aws*
 *.pem
+certs
