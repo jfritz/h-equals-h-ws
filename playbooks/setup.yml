@@ -60,6 +60,7 @@
             shell: /bin/bash
             password: "{{ h_admin_user_pw_hash }}"
           when: h_admin_user_name
+          # TODO ensure this user can't ssh - use cockpit to local ip only?
 
         - name: Basic user env
           ansible.builtin.lineinfile:
