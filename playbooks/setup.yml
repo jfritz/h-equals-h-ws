@@ -117,12 +117,14 @@
             name: postgres
             group: db-data
             password: "{{ h_postgres_user_pw_hash }}"
+            shell: "/usr/sbin/nologin"
 
         - name: Create system user for db user 
           ansible.builtin.user:
             name: "{{ h_db_user_name }}"
             group: db-data
             password: "{{ h_db_user_pw_hash }}"
+            shell: "/usr/sbin/nologin"
 
         - name: Create postgres db user
           become: true

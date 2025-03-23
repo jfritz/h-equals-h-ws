@@ -59,6 +59,8 @@ endif
 
 # TODO make infra-template and implement make template?
 # TODO make load-test
+# TODO make open-cockpit-ports / close-cockpit-ports
+# TODO make open-ssh-ports / close-ssh-ports
 
 # Make build-infra - launch ec2 instance from template and log current aws instance., creates .aws_instance_id
 .PHONY: build-infra
