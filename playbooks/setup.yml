@@ -84,6 +84,12 @@
               - whois
               - cockpit
 
+        - name: Enable cockpit
+          ansible.builtin.service:
+            name: cockpit
+            state: started
+            enabled: true
+
         - name: Configure sudo
           community.general.sudoers:
             name: sudo-as-root

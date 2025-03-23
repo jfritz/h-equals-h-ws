@@ -77,7 +77,7 @@ build-infra:
 .PHONY: clean-infra
 clean-infra:
 	aws ec2 terminate-instances --instance-ids $(shell cat $(mkfile_dir)/.aws_instance_id)
-	rm .aws_public_ip .aws_instance_id
+	-rm .aws_public_ip .aws_instance_id
 
 #  Make update-prod - ensures prod ip is in prod inventory, creates .aws_public_ip
 .PHONY: update-prod
