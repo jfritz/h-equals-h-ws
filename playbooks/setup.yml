@@ -385,13 +385,37 @@
     # ------------------------------------------------------
 
     # ------------------------------------------------------
+    - name: FAILLOCK SETUP BLOCK
+      block:
+        - name: Update /etc/pam.d/common-auth to inject faillock
+          ansible.builtin.lineinfile:
+            line: "auth required pam_faillock.so preauth audit silent deny=3 unlock_time=900"
+            insertbefore: ".*pam_unix.so nullok.*$"
+            path: /etc/pam.d/common-auth
+
+        - name: Update /etc/pam.d/common-auth with faillock blocks
+          ansible.builtin.blockinfile:
+            content: |
+              auth    [default=die] pam_faillock.so authfail audit deny=3 unlock_time=900
+              auth    sufficient pam_faillock.so authsucc audit deny=3 unlock_time=900
+            insertafter: ".*pam_unix.so nullok.*"
+            path: /etc/pam.d/common-auth
+
+        - name: Update /etc/pam.d/common-account to inject faillock
+          ansible.builtin.lineinfile:
+            # Insert at EOF
+            line: "account required pam_faillock.so"
+            path: /etc/pam.d/common-account
+
+          # NOTE: The default /etc/security/faillock.conf is fine
+    # ------------------------------------------------------
+
+    # ------------------------------------------------------
     # - name: CACHE SETUP BLOCK
     # - name: Create cache service user and directories
     # - name: Retrieve and install cache
     # - name: Configure cache
     # ------------------------------------------------------
-
-    # COCKPIT ENABLE ON REBOOT? TODO
 
     # ------------------------------------------------------
     # - name: CLEANUP BLOCK
