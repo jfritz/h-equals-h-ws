@@ -1,6 +1,9 @@
 # h-equals-h website Ansible build
 
+
 ## Dev Environment Setup
+
+
 ### MacOS
 1. Install homebrew
 2. brew install pipx
@@ -10,8 +13,19 @@
 6. Follow instructions at all steps to update $PATH.
 7. Install aws cli v2
 8. Authenticate using .aws/credentials with key made on IAM user in AWS console. IAM user needs EC2 permissions.
+9. Test aws cli with a test command
 
-## Quick Start
+### AWS 
+
+NOTE: Only prod builds use aws. Local builds assume local debian VM is running and accessible. Ensure that: 
+
+1. AWS launch template named properly (see Makefile make-infra) and uses Debian 12,
+1. You have private key for ec2 auth set up in .ssh/*.pem and set that path in the prod inventory
+1. AWS elastic IP associated with network adapater for instance that will spin up from template (if permanent static IP required)
+1. Proper DNS config in Route 53 and your domain name registrar
+1. Production/dev inventories set up for ansible
+
+### Quick Start
 
  After you have the requirements set up above:
 
