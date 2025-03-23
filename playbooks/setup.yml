@@ -196,6 +196,8 @@
               - php-curl # for grav
               - php-gd # for grav
               - php-zip # for grav
+              - php-intl # for grav plugis
+              - php-yaml # for grav plugis
 
         # - name: Configure php with sane defaults for 2gb system, memory limits, file upload limits, et.
 
@@ -372,7 +374,7 @@
 
     # ------------------------------------------------------
     # - name: FIREWALL CONFIG SETUP BLOCK
-    # TODO 
+    # TODO relying on AWS security groups for this. 
     # ------------------------------------------------------
 
     # ------------------------------------------------------
@@ -405,6 +407,6 @@
         msg: |
           COCKPIT: http://{{ ansible_host }}:9090
           ROOT:    http://{{ ansible_host }}
-          FORUM:    http://{{ ansible_host }}/{{ h_forum_dir_name }}
+          FORUM:   http://{{ ansible_host }}/{{ h_forum_dir_name }}
 
     # ------------------------------------------------------
