@@ -72,7 +72,14 @@ build-infra:
 	--launch-template LaunchTemplateName=h-equals-h-uat-templ --output json | \
 	grep InstanceId | cut -d ":" -f2 | cut -d "\"" -f2 > $(mkfile_dir)/.aws_instance_id
 	@cat $(mkfile_dir)/.aws_instance_id
+	$(eval instance_id = $(shell cat .aws_instance_id))
 #             "InstanceId": "i-0efeae13e56df1064",
+#
+# Attach public eip.
+# Customize the allocation id here
+# use `aws ec2 describe-addresses`
+	aws ec2 associate-address --instance-id $(instance_id) --allocation-id eipalloc-0b9d11eda566e528c
+
 
 # Make clean-infra - destroy ec2 instance (configure to destroy EBS as well)
 # Don't run this after you go to production! Set termination protection on your prod instance
@@ -92,44 +99,44 @@ update-prod:
 	echo $(heqh_pub_ip) > .aws_public_ip
 	@head -n2 hosts/prod/inventory
 
-#  Make export-certs - transfers SSL certs from prod to local machine
-.PHONY: export-certs
-export-certs:
-	$(eval certpath := /etc/letsencrypt/archive/)
+#  Make pull-certs - transfers SSL certs from prod to local machine as a backup
+.PHONY: pull-certs
+pull-certs:
+	$(eval certpath := /etc/letsencrypt/)
 	$(eval pub_ip = $(shell cat .aws_public_ip))
 	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
 # Temporary so admin can read it
-	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R admin $(certpath)" 
+	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R admin $(certpath) && tar -czf /tmp/certs.tar.gz $(certpath)" 
 	@sleep 2
-	scp -r -i $(keypath) admin@$(pub_ip):$(certpath) $(mkfile_dir)/certs
-	chmod -R 500 $(mkfile_dir)/certs
+	-mv $(mkfile_dir)/certs/certs.tar.gz $(mkfile_dir)/certs/certs.tar.gz.bak
+	-mkdir certs && chmod 700 certs
+	scp -r -i $(keypath) admin@$(pub_ip):/tmp/certs.tar.gz $(mkfile_dir)/certs
+	chmod 500 $(mkfile_dir)/certs/certs.tar.gz
 	@sleep 2
-	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R root $(certpath)" 
+	ssh -i $(keypath) admin@$(pub_ip) "rm -rf /tmp/certs.tar.gz && sudo chown -R root $(certpath)" 
 
 
 # ORDERED LIST DEBUG TODO 
-# TODO TEST ME mport-certs ensure paths are right and install symlinks? or are they there already?
+# TODO test eip assign
 # TODO does importing certs even work to a new machine?
-# TODO ansible update 10-ssl.conf
-# TODO ansible restart lighttpd/lighty-mod per instrs
 # TODO certificate renewal automation
 # TODO test build without certs
 # TODO launch template make command needs: debian 12, t2.micro, security group configurable, network IF configurable (linked to EIP)
-# TODO need elastic ip permanent on launch template somehow
 
-#  Make import-certs - transfers SSL certs from local certs/*.pem to prod, restarts services
-.PHONY: import-certs
-import-certs:
-	$(eval certpath := /etc/letsencrypt/archive/)
+#  Make push-certs - transfers SSL certs from local backup to prod, restarts services
+.PHONY: push-certs
+push-certs:
+	$(eval certpath := /etc/letsencrypt/)
 	$(eval pub_ip = $(shell cat .aws_public_ip))
 	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
-# Temporary so admin can read it
-	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R admin $(certpath)" 
+	
+	-ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/certs.tar.gz"
 	@sleep 2
-	scp -r -i $(keypath) admin@$(pub_ip):$(certpath) $(mkfile_dir)/certs
-	chmod -R 500 $(mkfile_dir)/certs
+	scp -r -i $(keypath) $(mkfile_dir)/certs/certs.tar.gz admin@$(pub_ip):/tmp/certs.tar.gz
 	@sleep 2
-	ssh -i $(keypath) admin@$(pub_ip) "sudo chown -R root $(certpath) && sudo systemctl reload lighttpd" 
+	ssh -i $(keypath) admin@$(pub_ip) "cd / && sudo tar -xvzf /tmp/certs.tar.gz \
+		&& sudo systemctl restart lighttpd \
+		&& rm /tmp/certs.tar.gz"
 
 # Make prod - deploy ansible to prod
 .PHONY: prod

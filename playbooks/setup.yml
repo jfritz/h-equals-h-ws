@@ -269,6 +269,22 @@
             # Ignore if user already exists
             - '"already enabled" not in lighty_result.stdout' 
 
+        - name: Lay down custom ssl conf
+          ansible.builtin.copy:
+            src: ../roles/web-configs/files/10-ssl.conf
+            dest: /etc/lighttpd/conf-available/10-ssl.conf
+            mode: '0755'
+          tags: webconf
+
+        - name: Configure httpd for ssl
+          ansible.builtin.command:
+            cmd: lighty-enable-mod ssl
+          register: lighty_results
+          failed_when: 
+            - lighty_results.rc != 0
+            # Ignore if already enabled
+            - '"already enabled" not in lighty_result.stdout' 
+
         - name: Link /www to /var/www/html for convenience
           ansible.builtin.file:
             src: /var/www/html
@@ -285,7 +301,6 @@
           ansible.builtin.shell:
             cmd: "rm -rf /www/*"
 
-        # TODO setup SSL https://wiki.debian.org/Lighttpd#SSL.2FTLS_.28HTTPS.29
     # ------------------------------------------------------
 
     # ------------------------------------------------------
@@ -386,7 +401,7 @@
 
           - name: Lay down custom grav conf
             ansible.builtin.copy:
-              src: ../roles/fix-grav-conf/files/02-grav.conf
+              src: ../roles/web-configs/files/02-grav.conf
               dest: /etc/lighttpd/conf-available/02-grav.conf
               mode: '0755'
             tags: webconf
