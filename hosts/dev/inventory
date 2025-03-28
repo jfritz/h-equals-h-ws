@@ -32,3 +32,4 @@ h_phpbb_lang_url=https://www.phpbb.com/customise/db/download/208693
 h_forum_dir_name="forum"
 
 h_grav_url=https://getgrav.org/download/core/grav-admin/latest
+ssl_enabled=false

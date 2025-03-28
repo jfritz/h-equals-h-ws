@@ -65,9 +65,10 @@
         - name: Root user env
           ansible.builtin.lineinfile:
             line: "alias ll=\"ls -ahl --color\""
-            path: "/home/root/.bashrc"
+            path: "/root/.bashrc"
+            create: true
 
-        - name: Root user env
+        - name: Admin user env
           ansible.builtin.lineinfile:
             line: "alias ll=\"ls -ahl --color\""
             path: "/home/admin/.bashrc"
@@ -269,21 +270,33 @@
             # Ignore if user already exists
             - '"already enabled" not in lighty_result.stdout' 
 
-        - name: Lay down custom ssl conf
-          ansible.builtin.copy:
-            src: ../roles/web-configs/files/10-ssl.conf
-            dest: /etc/lighttpd/conf-available/10-ssl.conf
-            mode: '0755'
-          tags: webconf
+        - name: SSL SETUP BLOCK
+          when: ssl_enabled
+          block: 
 
-        - name: Configure httpd for ssl
-          ansible.builtin.command:
-            cmd: lighty-enable-mod ssl
-          register: lighty_results
-          failed_when: 
-            - lighty_results.rc != 0
-            # Ignore if already enabled
-            - '"already enabled" not in lighty_result.stdout' 
+          - name: Lay down custom ssl conf
+            ansible.builtin.copy:
+              src: ../roles/web-configs/files/10-ssl.conf
+              dest: /etc/lighttpd/conf-available/10-ssl.conf
+              mode: '0755'
+
+          # See makefile pull-certs -- configure SSL on the web server by hand, then pull certs,
+          # then you can run this ansible to deploy SSL moving forward
+          - name: Lay down production SSL certs - 
+            ansible.builtin.unarchive:
+              src: ../certs/certs.tar.gz
+              dest: /
+              remote_src: false
+              # Needs lighttpd restart - below
+
+          - name: Configure httpd for ssl
+            ansible.builtin.command:
+              cmd: lighty-enable-mod ssl
+            register: lighty_results
+            failed_when: 
+              - lighty_results.rc != 0
+              # Ignore if already enabled
+              - '"already enabled" not in lighty_result.stdout' 
 
         - name: Link /www to /var/www/html for convenience
           ansible.builtin.file:
@@ -437,7 +450,7 @@
     # ------------------------------------------------------
 
     # ------------------------------------------------------
-    # For cockpit protection - ssh password auth is disabled by default
+    # For cockpit protection - ssh password auth is disabled by default in debian 12
     - name: FAILLOCK SETUP BLOCK
       block:
         - name: Update /etc/pam.d/common-auth to inject faillock

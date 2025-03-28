@@ -64,22 +64,25 @@ endif
 # TODO make reassociate-elastic-ip # re assigns elastic IP to the network adapter on the instance
 # TODO make export-certs / import-certs # /etc/letsencrypt/live/h-equals-h.com/fullchain,privkey.pem
 
-# Make build-infra - launch ec2 instance from template and log current aws instance., creates .aws_instance_id
+# Make build-infra - launch ec2 instance from template and 
+# log current aws instance., creates .aws_instance_id, assigns elastic IP
 .PHONY: build-infra
-build-infra:
+build-infra: launch-instance associate-ip update-prod-ip
+
+.PHONY: launch-instance
+launch-instance: 
 	aws ec2 run-instances \
 	--tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=h-equals-h-ws}]' \
 	--launch-template LaunchTemplateName=h-equals-h-uat-templ --output json | \
 	grep InstanceId | cut -d ":" -f2 | cut -d "\"" -f2 > $(mkfile_dir)/.aws_instance_id
-	@cat $(mkfile_dir)/.aws_instance_id
-	$(eval instance_id = $(shell cat .aws_instance_id))
 #             "InstanceId": "i-0efeae13e56df1064",
-#
-# Attach public eip.
-# Customize the allocation id here
-# use `aws ec2 describe-addresses`
-	aws ec2 associate-address --instance-id $(instance_id) --allocation-id eipalloc-0b9d11eda566e528c
+	@cat $(mkfile_dir)/.aws_instance_id
 
+# Make associate-ip -- associates known elastic ip to instance, see `aws ec2 describe-addresses`
+.PHONY: associate-ip
+associate-ip:
+	$(eval instance_id = $(shell cat $(mkfile_dir)/.aws_instance_id))
+	aws ec2 associate-address --instance-id $(instance_id) --allocation-id eipalloc-0b9d11eda566e528c
 
 # Make clean-infra - destroy ec2 instance (configure to destroy EBS as well)
 # Don't run this after you go to production! Set termination protection on your prod instance
@@ -88,9 +91,9 @@ clean-infra:
 	aws ec2 terminate-instances --instance-ids $(shell cat $(mkfile_dir)/.aws_instance_id)
 	-rm .aws_public_ip .aws_instance_id
 
-#  Make update-prod - ensures prod ip is in prod inventory, creates .aws_public_ip
-.PHONY: update-prod
-update-prod:
+#  Make update-prod-ip - ensures prod ip is in prod inventory, creates .aws_public_ip
+.PHONY: update-prod-ip
+update-prod-ip:
 	cd $(mkfile_dir)
 	$(eval instance_id = $(shell cat .aws_instance_id))
 	@echo $(instance_id)
@@ -158,7 +161,7 @@ ssh-prod:
 # make debug - use this for random testing
 .PHONY: debug
 debug:
-	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/prod/inventory -t db setup.yml
+	aws ec2 associate-address --instance-id `cat $(mkfile_dir)/.aws_instance_id` --allocation-id eipalloc-0b9d11eda566e528c
 
 # .PHONY: install
 # install: ## make install [roles_path=roles/] # Install roles dependencies
