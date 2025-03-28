@@ -82,7 +82,10 @@ launch-instance:
 .PHONY: associate-ip
 associate-ip:
 	$(eval instance_id = $(shell cat $(mkfile_dir)/.aws_instance_id))
-	aws ec2 associate-address --instance-id $(instance_id) --allocation-id eipalloc-0b9d11eda566e528c
+
+	while ! aws ec2 associate-address --instance-id $(instance_id) --allocation-id eipalloc-0b9d11eda566e528c; do \
+		sleep 3; \
+	done
 
 # Make clean-infra - destroy ec2 instance (configure to destroy EBS as well)
 # Don't run this after you go to production! Set termination protection on your prod instance
