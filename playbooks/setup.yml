@@ -19,7 +19,7 @@
 
         - name: Set hostname
           ansible.builtin.hostname:
-            name: h-equals-h
+            name: "{{ h_hostname }}"
         
         - name: Set static ip FQDN hostname in hosts
           ansible.builtin.lineinfile:

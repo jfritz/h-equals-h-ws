@@ -61,8 +61,6 @@ endif
 # TODO make load-test
 # TODO make open-cockpit-ports / close-cockpit-ports # open/close on security group for my IP
 # TODO make open-ssh-ports / close-ssh-ports # open/close on security group for my IP
-# TODO make reassociate-elastic-ip # re assigns elastic IP to the network adapter on the instance
-# TODO make export-certs / import-certs # /etc/letsencrypt/live/h-equals-h.com/fullchain,privkey.pem
 
 # Make build-infra - launch ec2 instance from template and 
 # log current aws instance., creates .aws_instance_id, assigns elastic IP
@@ -82,7 +80,7 @@ launch-instance:
 .PHONY: associate-ip
 associate-ip:
 	$(eval instance_id = $(shell cat $(mkfile_dir)/.aws_instance_id))
-
+	@echo "... waiting for instance to come up ..." 
 	while ! aws ec2 associate-address --instance-id $(instance_id) --allocation-id eipalloc-0b9d11eda566e528c; do \
 		sleep 3; \
 	done
