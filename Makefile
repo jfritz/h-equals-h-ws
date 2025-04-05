@@ -121,11 +121,10 @@ pull-certs:
 
 
 # ORDERED LIST DEBUG TODO 
-# TODO test eip assign
-# TODO does importing certs even work to a new machine?
 # TODO certificate renewal automation
 # TODO test build without certs
 # TODO launch template make command needs: debian 12, t2.micro, security group configurable, network IF configurable (linked to EIP)
+# TODO make restore-grav-backup # restores grav backup to webroot
 
 #  Make push-certs - transfers SSL certs from local backup to prod, restarts services
 .PHONY: push-certs
@@ -163,6 +162,22 @@ ssh-prod:
 .PHONY: debug
 debug:
 	aws ec2 associate-address --instance-id `cat $(mkfile_dir)/.aws_instance_id` --allocation-id eipalloc-0b9d11eda566e528c
+
+# make restore-grav-backup
+# UNTESTED
+.PHONY: restore-grav-backup
+restore-grav-backup:
+	$(eval pub_ip = $(shell cat .aws_public_ip))
+	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
+	
+	-ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.tar.gz"
+	@sleep 2
+	scp -r -i $(keypath) $(mkfile_dir)/backups/backup.tar.gz admin@$(pub_ip):/tmp/backup.tar.gz
+	@sleep 2
+	ssh -i $(keypath) admin@$(pub_ip) "cd /www && sudo tar -xvzf /tmp/backup.tar.gz \
+		&& sudo systemctl restart lighttpd \
+		&& rm /tmp/backup.tar.gz"
+	
 
 # .PHONY: install
 # install: ## make install [roles_path=roles/] # Install roles dependencies

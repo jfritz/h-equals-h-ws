@@ -31,3 +31,6 @@ hosts/prod/inventory
 .aws*
 *.pem
 certs
+
+# prod grav backup
+backups

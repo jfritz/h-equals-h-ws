@@ -282,7 +282,7 @@
 
           # See makefile pull-certs -- configure SSL on the web server by hand, then pull certs,
           # then you can run this ansible to deploy SSL moving forward
-          - name: Lay down production SSL certs - 
+          - name: Lay down production SSL certs 
             ansible.builtin.unarchive:
               src: ../certs/certs.tar.gz
               dest: /
@@ -441,6 +441,11 @@
               group: www-data
               mode: '2770'
               recurse: true
+
+          - name: Remove default favicon
+            ansible.builtin.file:
+              state: absent
+              path: /var/www/html/usr/themes/quark/images/favicon.ico
 
     # ------------------------------------------------------
 
