@@ -65,7 +65,7 @@ endif
 # Make build-infra - launch ec2 instance from template and 
 # log current aws instance., creates .aws_instance_id, assigns elastic IP
 .PHONY: build-infra
-build-infra: launch-instance associate-ip update-prod-ip
+build-infra: launch-instance associate-ip update-prod-ip clear-known-host
 
 .PHONY: launch-instance
 launch-instance: 
@@ -102,6 +102,12 @@ update-prod-ip:
 	sed -i '.bak' -r 's/^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)/$(heqh_pub_ip)/g' hosts/prod/inventory 
 	echo $(heqh_pub_ip) > .aws_public_ip
 	@head -n2 hosts/prod/inventory
+
+# make clear-known-host - clear out the known hosts for the server to avoid errors due to rebuild
+.PHONY: clear-known-host
+clear-known-host:
+	$(eval pub_ip = $(shell cat .aws_public_ip))
+	ssh-keygen -R $(pub_ip) 2>/dev/null
 
 #  Make pull-certs - transfers SSL certs from prod to local machine as a backup
 .PHONY: pull-certs
@@ -275,4 +281,4 @@ restore-backup:
 # help:
 # 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-# .DEFAULT_GOAL := help
+.DEFAULT_GOAL := build-infra
