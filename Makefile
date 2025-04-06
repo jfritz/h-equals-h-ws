@@ -163,8 +163,18 @@ ssh-prod:
 debug:
 	aws ec2 associate-address --instance-id `cat $(mkfile_dir)/.aws_instance_id` --allocation-id eipalloc-0b9d11eda566e528c
 
-# make restore-grav-backup
+# make retrieve-grav-backups - rsync grav backups to ./backups
+# TODO make optional ansible task for restoring this during build?
+.PHONY: retrieve-grav-backups
+retrieve-grav-backups:
+	$(eval pub_ip = $(shell cat .aws_public_ip))
+	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
+	
+	rsync -avz -e 'ssh -i "$(keypath)"' admin@$(pub_ip):/www/backup/*.zip $(mkfile_dir)/backups/
+
+# make restore-grav-backup - restore latest local grav backup to server
 # UNTESTED
+# TODO make optional ansible task for restoring this during build?
 .PHONY: restore-grav-backup
 restore-grav-backup:
 	$(eval pub_ip = $(shell cat .aws_public_ip))
@@ -172,6 +182,7 @@ restore-grav-backup:
 	
 	-ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.tar.gz"
 	@sleep 2
+# TODO find latest backup
 	scp -r -i $(keypath) $(mkfile_dir)/backups/backup.tar.gz admin@$(pub_ip):/tmp/backup.tar.gz
 	@sleep 2
 	ssh -i $(keypath) admin@$(pub_ip) "cd /www && sudo tar -xvzf /tmp/backup.tar.gz \
