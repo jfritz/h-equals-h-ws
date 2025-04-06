@@ -163,10 +163,10 @@ ssh-prod:
 debug:
 	aws ec2 associate-address --instance-id `cat $(mkfile_dir)/.aws_instance_id` --allocation-id eipalloc-0b9d11eda566e528c
 
-# make retrieve-grav-backups - rsync grav backups to ./backups
+# make pull-grav-backups - rsync grav backups to ./backups
 # TODO make optional ansible task for restoring this during build?
-.PHONY: retrieve-grav-backups
-retrieve-grav-backups:
+.PHONY: pull-grav-backups
+pull-grav-backups:
 	$(eval pub_ip = $(shell cat .aws_public_ip))
 	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
 	
@@ -179,15 +179,15 @@ retrieve-grav-backups:
 restore-grav-backup:
 	$(eval pub_ip = $(shell cat .aws_public_ip))
 	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
+	$(eval last_backup = $(shell ls -1 -t $(mkfile_dir)/backups/*.zip | head -n1))
 	
-	-ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.tar.gz"
+	-ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.zip"
 	@sleep 2
-# TODO find latest backup
-	scp -r -i $(keypath) $(mkfile_dir)/backups/backup.tar.gz admin@$(pub_ip):/tmp/backup.tar.gz
+	scp -r -i $(keypath) $(last_backup) admin@$(pub_ip):/tmp/backup.zip
 	@sleep 2
-	ssh -i $(keypath) admin@$(pub_ip) "cd /www && sudo tar -xvzf /tmp/backup.tar.gz \
+	ssh -i $(keypath) admin@$(pub_ip) "cd /www && unzip -o /tmp/backup.zip \
 		&& sudo systemctl restart lighttpd \
-		&& rm /tmp/backup.tar.gz"
+		&& rm /tmp/backup.zip
 	
 
 # .PHONY: install
