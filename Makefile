@@ -187,8 +187,7 @@ restore-grav-backup:
 	@sleep 2
 	ssh -i $(keypath) admin@$(pub_ip) "cd /www && unzip -o /tmp/backup.zip \
 		&& sudo systemctl restart lighttpd \
-		&& rm /tmp/backup.zip
-	
+		&& rm /tmp/backup.zip"
 
 # .PHONY: install
 # install: ## make install [roles_path=roles/] # Install roles dependencies
