@@ -177,7 +177,7 @@ create-backup:
 	scp -r -i $(keypath) admin@$(pub_ip):/tmp/backup.tar.gz $(mkfile_dir)/backups/backup-$(dt).tar.gz
 	ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.tar.gz"
 
-# make restore-backup - restore latest local file backup to server
+# make restore-backup - restore the latest local ./backups/*.tar.gz backup to server
 # TODO make optional ansible task for restoring this during build?
 .PHONY: restore-backup
 restore-backup:

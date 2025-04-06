@@ -16,11 +16,12 @@
         - name: Set time syncing
           ansible.builtin.command:
             cmd: timedatectl set-ntp true
+          changed_when: true
 
         - name: Set hostname
           ansible.builtin.hostname:
             name: "{{ h_hostname }}"
-        
+  
         - name: Set static ip FQDN hostname in hosts
           ansible.builtin.lineinfile:
             path: /etc/hosts
@@ -31,11 +32,11 @@
             update_cache: true
             upgrade: full
 
-        - name: Configure root pw 
+        - name: Configure root pw
           ansible.builtin.user:
             name: root
             password: "{{ h_root_pw_hash }}"
-          when: h_root_pw_hash 
+          when: h_root_pw_hash
 
         - name: Configure groups
           ansible.builtin.group:
@@ -44,8 +45,8 @@
         - name: Configure admin users groups if admin user exists (aws)
           ansible.builtin.user:
             name: admin
-            groups: 
-              - sudo 
+            groups:
+              - sudo
               - www-data
               - db-data
             shell: /bin/bash
@@ -53,8 +54,8 @@
         - name: Configure basic user
           ansible.builtin.user:
             name: "{{ h_admin_user_name }}"
-            groups: 
-              - sudo 
+            groups:
+              - sudo
               - www-data
               - db-data
             shell: /bin/bash
@@ -80,9 +81,9 @@
             path: "/home/{{ h_admin_user_name }}/.bashrc"
           when: h_admin_user_name
 
-        - name: Install base OS utilities 
+        - name: Install base OS utilities
           ansible.builtin.apt:
-            name: 
+            name:
               - acl # helper for ansible elevation to non priv user (postgres)
               - sudo
               - unzip
@@ -143,7 +144,7 @@
     # ------------------------------------------------------
     # - name: FIREWALL SETUP BLOCK
     # - name: Install firewall
-    # - name: Configure firewall 
+    # - name: Configure firewall
     # ------------------------------------------------------
 
     # ------------------------------------------------------
@@ -154,10 +155,10 @@
         - name: Retrieve and install pgsql
           ansible.builtin.apt:
             update_cache: true
-            name: 
+            name:
               - "postgresql"
               - "postgresql-client"
-          
+  
         - name: Set postgres system user pw/group
           ansible.builtin.user:
             name: postgres
@@ -165,7 +166,7 @@
             password: "{{ h_postgres_user_pw_hash }}"
             shell: "/usr/sbin/nologin"
 
-        - name: Create system user for db user 
+        - name: Create system user for db user
           ansible.builtin.user:
             name: "{{ h_db_user_name }}"
             group: db-data
@@ -177,28 +178,30 @@
           become_user: postgres
           ansible.builtin.command:
             cmd: >
-              psql -d postgres -c 
+              psql -d postgres -c
               "CREATE ROLE {{ h_db_user_name }} PASSWORD
                '{{ h_db_user_pg_pw_hash }}'
                NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN;"
           register: dbu_create
-          failed_when: 
-            - dbu_create.rc != 0  
+          failed_when:
+            - dbu_create.rc != 0
             # Ignore if user already exists
-            - '"already exists" not in dbu_create.stderr' 
+            - '"already exists" not in dbu_create.stderr'
+          changed_when: true
           tags:
             - db
 
-        - name: Create postgres db 
+        - name: Create postgres db
           become: true
           become_user: postgres
           ansible.builtin.command:
             cmd: "createdb -O {{ h_db_user_name }} {{ h_db_name }}"
           register: db_create
-          failed_when: 
-            - db_create.rc != 0  
+          failed_when:
+            - db_create.rc != 0
             # Ignore if user already exists
-            - '"already exists" not in db_create.stderr' 
+            - '"already exists" not in db_create.stderr'
+          changed_when: true
           tags:
             - db
 
@@ -207,9 +210,10 @@
           become_user: postgres
           ansible.builtin.command:
             cmd: >
-              psql -d postgres -c 'ALTER ROLE {{ h_db_user_name }} LOGIN; 
+              psql -d postgres -c 'ALTER ROLE {{ h_db_user_name }} LOGIN;
               GRANT CONNECT, CREATE ON DATABASE {{ h_db_name }} TO {{ h_db_user_name }};'
-          tags: 
+          changed_when: true
+          tags:
             - db
 
             # TODO ensure user can only connect locally
@@ -230,11 +234,11 @@
 
     # ------------------------------------------------------
     - name: PHP SETUP BLOCK
-      block: 
+      block:
         - name: Retrieve and install php
           ansible.builtin.apt:
             update_cache: true
-            name: 
+            name:
               - php-fpm # fpm version used with lighttpd
               - php-xml # for phpbb
               - php-mbstring # for phpbb
@@ -244,6 +248,7 @@
               - php-zip # for grav
               - php-intl # for grav plugis
               - php-yaml # for grav plugis
+              - php-apcu # for grav caching, but not required
 
         # - name: Configure php with sane defaults for 2gb system, memory limits, file upload limits, et.
 
@@ -251,7 +256,7 @@
 
     # ------------------------------------------------------
     - name: HTTPD SETUP BLOCK
-      block: 
+      block:
 
         - name: Retrieve and install httpd
           ansible.builtin.apt:
@@ -264,46 +269,47 @@
 
         - name: Configure httpd for php, must have php-fpm installed
           ansible.builtin.command:
-            cmd: lighty-enable-mod fastcgi-php-fpm 
+            cmd: lighty-enable-mod fastcgi-php-fpm
           register: lighty_result
-          failed_when: 
+          failed_when:
             - lighty_result.rc != 0
             # Ignore if user already exists
-            - '"already enabled" not in lighty_result.stdout' 
+            - '"already enabled" not in lighty_result.stdout'
+          changed_when: true
 
         - name: SSL SETUP BLOCK
           when: ssl_enabled
-          block: 
+          block:
 
-          - name: Lay down custom ssl conf
-            ansible.builtin.copy:
-              src: ../roles/web-configs/files/10-ssl.conf
-              dest: /etc/lighttpd/conf-available/10-ssl.conf
-              mode: '0755'
+            - name: Lay down custom ssl conf
+              ansible.builtin.copy:
+                src: ../roles/web-configs/files/10-ssl.conf
+                dest: /etc/lighttpd/conf-available/10-ssl.conf
+                mode: '0755'
 
-          # See makefile pull-certs -- configure SSL on the web server by hand, then pull certs,
-          # then you can run this ansible to deploy SSL moving forward
-          - name: Lay down production SSL certs 
-            ansible.builtin.unarchive:
-              src: ../certs/certs.tar.gz
-              dest: /
-              remote_src: false
-              # Needs lighttpd restart - below
+            # See makefile pull-certs -- configure SSL on the web server by hand, then pull certs,
+            # then you can run this ansible to deploy SSL moving forward
+            - name: Lay down production SSL certs 
+              ansible.builtin.unarchive:
+                src: ../certs/certs.tar.gz
+                dest: /
+                remote_src: false
+                # Needs lighttpd restart - below
 
-          - name: Configure httpd for ssl
-            ansible.builtin.command:
-              cmd: lighty-enable-mod ssl
-            register: lighty_results
-            failed_when: 
-              - lighty_results.rc != 0
-              # Ignore if already enabled
-              - '"already enabled" not in lighty_result.stdout' 
+            - name: Configure httpd for ssl
+              ansible.builtin.command:
+                cmd: lighty-enable-mod ssl
+              register: lighty_results
+              failed_when: 
+                - lighty_results.rc != 0
+                # Ignore if already enabled
+                - '"already enabled" not in lighty_result.stdout' 
 
         - name: Link /www to /var/www/html for convenience
           ansible.builtin.file:
             src: /var/www/html
             dest: /www
-            state: link 
+            state: link
 
         - name: Enable and restart lighttpd
           ansible.builtin.service:
@@ -314,19 +320,20 @@
         - name: Clear anything installed in /var/www/html
           ansible.builtin.shell:
             cmd: "rm -rf /www/*"
+          changed_when: true
 
     # ------------------------------------------------------
 
     # ------------------------------------------------------
     - name: PHPBB SETUP BLOCK
-      block: 
+      block:
 
         - name: Retrieve phpBB
           ansible.builtin.get_url:
             url: "{{ h_phpbb_url }}"
             dest: /www/phpbb.zip
             mode: '0755'
-          
+        
         - name: Install phpBB
           ansible.builtin.unarchive:
             remote_src: true
@@ -338,6 +345,7 @@
             remote_src: true
             src: /www/phpBB3/
             dest: "/www/{{ h_forum_dir_name }}/"
+            mode: '2770'
 
         - name: Remove phpbb src
           ansible.builtin.file:
@@ -351,7 +359,8 @@
           ansible.builtin.get_url:
             url: "{{ h_phpbb_lang_url }}"
             dest: "/tmp/en_us.zip"
-          
+            mode: "0770"
+        
         - name: Unzip language pack
           ansible.builtin.unarchive:
             remote_src: true
@@ -364,6 +373,7 @@
             # TODO predict this folder name or just somehow extract from under it
             src: "/www/{{ h_forum_dir_name }}/american_english_4_14_0/"
             dest: /www/{{ h_forum_dir_name }}/
+            mode: "2770"
 
         - name: Remove language pack src
           ansible.builtin.file:
@@ -372,7 +382,7 @@
           loop:
             - "/www/{{ h_forum_dir_name }}/american_english_4_14_0/"
             - "/tmp/en_us.zip"
-          
+ 
         - name: Finalize permissions of www
           ansible.builtin.file:
             path: /var/www/html
@@ -387,72 +397,73 @@
     - name: GRAV SETUP BLOCK
       block:
 
-          - name: Retrieve grav-admin
-            ansible.builtin.get_url:
-              url: "{{ h_grav_url }}"
-              dest: /www/grav.zip
-              mode: '0755'
+        - name: Retrieve grav-admin
+          ansible.builtin.get_url:
+            url: "{{ h_grav_url }}"
+            dest: /www/grav.zip
+            mode: '0755'
 
-          - name: Unzip grav
-            ansible.builtin.unarchive:
-              remote_src: true
-              src: /www/grav.zip
-              dest: /www/
+        - name: Unzip grav
+          ansible.builtin.unarchive:
+            remote_src: true
+            src: /www/grav.zip
+            dest: /www/
 
-          - name: Install grav
-            ansible.builtin.copy:
-              remote_src: true
-              src: /www/grav-admin/
-              dest: /www/ # grav_path DEBUG
+        - name: Install grav
+          ansible.builtin.copy:
+            remote_src: true
+            src: /www/grav-admin/
+            dest: /www/ # grav_path DEBUG
+            mode: "2770"
 
-          - name: Clear grav src
-            ansible.builtin.file:
-              path: "{{ item }}"
-              state: absent
-            loop:
-              - /www/grav.zip
-              - /www/grav-admin/
+        - name: Clear grav src
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /www/grav.zip
+            - /www/grav-admin/
 
-          - name: Lay down custom grav conf
-            ansible.builtin.copy:
-              src: ../roles/web-configs/files/02-grav.conf
-              dest: /etc/lighttpd/conf-available/02-grav.conf
-              mode: '0755'
-            tags: webconf
+        - name: Lay down custom grav conf
+          ansible.builtin.copy:
+            src: ../roles/web-configs/files/02-grav.conf
+            dest: /etc/lighttpd/conf-available/02-grav.conf
+            mode: '0755'
+          tags: webconf
 
-          - name: Link confs to lighttpd
-            ansible.builtin.file:
-              src: "{{ item }}"
-              dest: "/etc/lighttpd/conf-enabled/{{ item | basename }}"
-              state: link
-            loop:
-              - /etc/lighttpd/conf-available/02-grav.conf
-            tags: webconf
+        - name: Link confs to lighttpd
+          ansible.builtin.file:
+            src: "{{ item }}"
+            dest: "/etc/lighttpd/conf-enabled/{{ item | basename }}"
+            state: link
+          loop:
+            - /etc/lighttpd/conf-available/02-grav.conf
+          tags: webconf
 
-          - name: Confirm we did not mangle the lighttpd conf - restart lighttpd
-            ansible.builtin.service:
-              name: lighttpd
-              state: restarted
-            tags: webconf
+        - name: Confirm we did not mangle the lighttpd conf - restart lighttpd
+          ansible.builtin.service:
+            name: lighttpd
+            state: restarted
+          tags: webconf
 
-          - name: Finalize permissions of www
-            ansible.builtin.file:
-              path: /var/www/html
-              owner: www-data
-              group: www-data
-              mode: '2770'
-              recurse: true
+        - name: Finalize permissions of www
+          ansible.builtin.file:
+            path: /var/www/html
+            owner: www-data
+            group: www-data
+            mode: '2770'
+            recurse: true
 
-          - name: Remove default favicon
-            ansible.builtin.file:
-              state: absent
-              path: /var/www/html/usr/themes/quark/images/favicon.ico
+        - name: Remove default favicon
+          ansible.builtin.file:
+            state: absent
+            path: /var/www/html/usr/themes/quark/images/favicon.ico
 
     # ------------------------------------------------------
 
     # ------------------------------------------------------
     # - name: FIREWALL CONFIG SETUP BLOCK
-    # TODO relying on AWS security groups for this. 
+    # TODO relying on AWS security groups for this.
     # ------------------------------------------------------
 
     # ------------------------------------------------------
@@ -505,7 +516,7 @@
 
     # ------------------------------------------------------
     # - name: SUMMARY BLOCK
-    - name: Echo paths 
+    - name: Echo paths
       ansible.builtin.debug:
         msg: |
           COCKPIT: http://{{ ansible_host }}:8718
