@@ -124,7 +124,6 @@ pull-certs:
 # TODO certificate renewal automation
 # TODO test build without certs
 # TODO launch template make command needs: debian 12, t2.micro, security group configurable, network IF configurable (linked to EIP)
-# TODO make restore-grav-backup # restores grav backup to webroot
 
 #  Make push-certs - transfers SSL certs from local backup to prod, restarts services
 .PHONY: push-certs
@@ -163,31 +162,41 @@ ssh-prod:
 debug:
 	aws ec2 associate-address --instance-id `cat $(mkfile_dir)/.aws_instance_id` --allocation-id eipalloc-0b9d11eda566e528c
 
-# make pull-grav-backups - rsync grav backups to ./backups
+# make create-backup - create a file backup of prod server
 # TODO make optional ansible task for restoring this during build?
-.PHONY: pull-grav-backups
-pull-grav-backups:
+.PHONY: create-backup
+create-backup:
 	$(eval pub_ip = $(shell cat .aws_public_ip))
 	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
+	$(eval dt = $(shell date -Iseconds))
 	
-	rsync -avz -e 'ssh -i "$(keypath)"' admin@$(pub_ip):/www/backup/*.zip $(mkfile_dir)/backups/
+	-ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.tar.gz" 
+	@sleep 2
+	ssh -i $(keypath) admin@$(pub_ip) "cd /www && tar -cvzf /tmp/backup.tar.gz ./"
+	@sleep 2
+	scp -r -i $(keypath) admin@$(pub_ip):/tmp/backup.tar.gz $(mkfile_dir)/backups/backup-$(dt).tar.gz
+	ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.tar.gz"
 
-# make restore-grav-backup - restore latest local grav backup to server
-# UNTESTED
+# make restore-backup - restore latest local file backup to server
 # TODO make optional ansible task for restoring this during build?
-.PHONY: restore-grav-backup
-restore-grav-backup:
+.PHONY: restore-backup
+restore-backup:
 	$(eval pub_ip = $(shell cat .aws_public_ip))
 	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
-	$(eval last_backup = $(shell ls -1 -t $(mkfile_dir)/backups/*.zip | head -n1))
+	$(eval last_backup = $(shell ls -1 -t $(mkfile_dir)/backups/*.tar.gz | head -n1))
 	
-	-ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.zip"
+# TODO seems OK to rm-rf /www before restoring backup. should we?
+	-ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.tar.gz"
 	@sleep 2
-	scp -r -i $(keypath) $(last_backup) admin@$(pub_ip):/tmp/backup.zip
+	scp -r -i $(keypath) $(last_backup) admin@$(pub_ip):/tmp/backup.tar.gz
 	@sleep 2
-	ssh -i $(keypath) admin@$(pub_ip) "cd /www && unzip -o /tmp/backup.zip \
+	ssh -i $(keypath) admin@$(pub_ip) "cd /www && sudo tar -xvzf /tmp/backup.tar.gz \
 		&& sudo systemctl restart lighttpd \
-		&& rm /tmp/backup.zip"
+		&& rm /tmp/backup.tar.gz"
+
+# NOTE: example command for restoring grav backup user dir manually:
+# jeff@MacBook-Pro h-equals-h-ws % rsync -r -e 'ssh -i  ~/.ssh/uat-1.pem' backups/default_site_backup--20250406041455/user admin@$(cat .aws_public_ip):/www/
+# and sudo chmod -R 2770 /www
 
 # .PHONY: install
 # install: ## make install [roles_path=roles/] # Install roles dependencies
