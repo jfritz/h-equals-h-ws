@@ -1,0 +1,63 @@
+---
+# UNTESTED
+# Designed to run on Debian 12
+- name: OPENSCAP Scan - Debian 12
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Install prereqs
+      ansible.builtin.apt:
+        name:
+          - bzip2 # for openscap OVAL defs
+          - openscap-scanner
+          # - ssg-debian
+
+    - name: Enable SWAP
+      ansible.builtin.command:
+        cmd: "{{ item }}"
+      changed_when: true
+      loop:
+        - '/bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=4096' # 1gig takes too long
+        - '/sbin/mkswap /var/swap.1'
+        - 'chmod 600 /var/swap.1'
+        - '/sbin/swapon /var/swap.1'
+
+    - name: Download OVAL defs
+      ansible.builtin.shell:
+        chdir: /tmp
+        cmd: "wget https://www.debian.org/security/oval/oval-definitions-$(lsb_release -cs).xml.bz2"
+      changed_when: true
+
+    - name: Extract OVAL defs
+      ansible.builtin.shell:
+        chdir: /tmp
+        cmd: "bunzip2 oval-definitions-$(lsb_release -cs).xml.bz2"
+      changed_when: true
+ 
+    - name: Run openscap-scanner
+      ansible.builtin.shell:
+        cmd: "oscap oval eval --report report.html oval-definitions*.xml"
+      changed_when: true
+
+    - name: Make report available online
+      ansible.builtin.file:
+        state: link
+        src: /tmp/report.html
+        dest: /www/scan-report.html
+        mode: '0770'
+        owner: www-data
+        group: www-data
+
+    - name: REVIEW REPORT ONLINE
+      ansible.builtin.debug:
+        msg: >
+          View report: http://{{ ansible_fqdn }}/scan-report.html
+          Ensure you delete this file when you are done.
+
+
+# TURN ON SWAP SPACE TEMPORARILY ON AWS INSTANCE
+        # $ sudo /bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024
+        # $ sudo /sbin/mkswap /var/swap.1
+        # $ sudo chmod 600 /var/swap.1
+        # $ sudo /sbin/swapon /var/swap.1
