@@ -8,14 +8,38 @@
   tasks:
     - name: Install prereqs
       ansible.builtin.apt:
+        update_cache: true
         name:
           - bzip2 # for openscap OVAL defs
           - openscap-scanner
-          # - ssg-debian
+          - ssg-base # for ssg-debian
+          # - ssg-debian # from testing, see below
 
-    - name: Enable SWAP
+    - name: Get ssg-debian from testing
+      ansible.builtin.get_url:
+        url: http://http.us.debian.org/debian/pool/main/s/scap-security-guide/ssg-debian_0.1.76-1_all.deb
+        dest: /tmp/ssg.debian.trixie.deb
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Install ssg-debian from testing
+      ansible.builtin.command:
+        cmd: 'dpkg -i /tmp/ssg.debian.trixie.deb'
+      changed_when: true
+
+    # ansible.builtin.stat takes SO long here
+    - name: Check SWAP
+      ansible.builtin.command:
+        cmd: stat /var/swap.1
+      register: _swap
+      changed_when: true
+      failed_when: false
+
+    - name: Enable SWAP # This won't last across a reboot
       ansible.builtin.command:
         cmd: "{{ item }}"
+      when: _swap.rc != 0
       changed_when: true
       loop:
         - '/bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=4096' # 1gig takes too long
@@ -23,36 +47,69 @@
         - 'chmod 600 /var/swap.1'
         - '/sbin/swapon /var/swap.1'
 
+    - name: Get lsb release
+      ansible.builtin.command:
+        cmd: "lsb_release -cs"
+      register: _rel
+      changed_when: true
+
     - name: Download OVAL defs
-      ansible.builtin.shell:
-        chdir: /tmp
-        cmd: "wget https://www.debian.org/security/oval/oval-definitions-$(lsb_release -cs).xml.bz2"
+      ansible.builtin.get_url:
+        url: "https://www.debian.org/security/oval/oval-definitions-{{ _rel.stdout }}.xml.bz2"
+        dest: /tmp/oval-defs.xml.bz2
+        owner: root
+        group: root
+        mode: '0700'
       changed_when: true
 
     - name: Extract OVAL defs
-      ansible.builtin.shell:
+      ansible.builtin.command:
         chdir: /tmp
-        cmd: "bunzip2 oval-definitions-$(lsb_release -cs).xml.bz2"
-      changed_when: true
- 
-    - name: Run openscap-scanner
-      ansible.builtin.shell:
-        cmd: "oscap oval eval --report report.html oval-definitions*.xml"
+        cmd: "bunzip2 -qf /tmp/oval-defs.xml.bz2"
       changed_when: true
 
-    - name: Make report available online
+    - name: Run openscap-scanner oval report
+      ansible.builtin.command:
+        cmd: "oscap oval eval --report /tmp/oval-report.html /tmp/oval-definitions-{{ _rel.stdout }}.xml"
+        creates: /tmp/oval-report.html
+      changed_when: true
+      failed_when: false
+
+    - name: Make oval report available online
       ansible.builtin.file:
         state: link
-        src: /tmp/report.html
-        dest: /www/scan-report.html
+        src: /tmp/oval-report.html
+        dest: /www/oval-report.html
         mode: '0770'
         owner: www-data
         group: www-data
 
-    - name: REVIEW REPORT ONLINE
+    - name: Run openscap-scanner xccdf report
+      ansible.builtin.command:
+        creates: /tmp/xccdf-report.html
+        cmd: >
+          oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_standard
+          --results-arf arf.xml
+          --report /tmp/xccdf-report.html
+          --oval-results /usr/share/xml/scap/ssg/content/ssg-debian12-ds.xml
+      changed_when: true
+      failed_when: false
+
+    - name: Make xccdf report available online
+      ansible.builtin.file:
+        state: link
+        src: /tmp/xccdf-report.html
+        dest: /www/xccdf-report.html
+        mode: '0770'
+        owner: www-data
+        group: www-data
+
+    - name: REVIEW REPORTS ONLINE
       ansible.builtin.debug:
-        msg: >
-          View report: http://{{ ansible_fqdn }}/scan-report.html
+        msg: |
+          View report:
+          http://{{ h_fqdn }}/oval-report.html
+          http://{{ h_fqdn }}/xccdf-report.html
           Ensure you delete this file when you are done.
 
 

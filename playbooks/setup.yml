@@ -104,7 +104,6 @@
               - certbot # for ssl cert sign
               - rsync # for backups
               - bzip2 # for openscap OVAL defs
-              - openscap-scanner
 
 # TURN ON SWAP SPACE TEMPORARILY ON AWS INSTANCE
         # $ sudo /bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024

@@ -166,7 +166,7 @@ ssh-prod:
 # make debug - use this for random testing
 .PHONY: debug
 debug:
-	aws ec2 associate-address --instance-id `cat $(mkfile_dir)/.aws_instance_id` --allocation-id eipalloc-0b9d11eda566e528c
+	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/prod/inventory openscap-scan.yml
 
 # make create-backup - create a file backup of prod server
 # TODO make optional ansible task for restoring this during build?
