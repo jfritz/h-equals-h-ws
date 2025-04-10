@@ -1,5 +1,4 @@
 ---
-# UNTESTED
 # Designed to run on Debian 12
 - name: OPENSCAP Scan - Debian 12
   hosts: all
@@ -36,6 +35,7 @@
       changed_when: true
       failed_when: false
 
+    # Prolly don't need to enable this on dev but need this on aws.
     - name: Enable SWAP # This won't last across a reboot
       ansible.builtin.command:
         cmd: "{{ item }}"
