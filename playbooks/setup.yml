@@ -104,6 +104,18 @@
               - certbot # for ssl cert sign
               - rsync # for backups
               - bzip2 # for openscap OVAL defs
+              - rsyslog # for openscap finding
+              - cron
+              - ntp
+
+        - name: Set up services
+          ansible.builtin.service:
+            name: "{{ item }}"
+            state: started
+            enabled: true
+          loop:
+            - rsyslog.service
+            - cron.service
 
 # TURN ON SWAP SPACE TEMPORARILY ON AWS INSTANCE
         # $ sudo /bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024
@@ -513,6 +525,265 @@
     # - name: Create cache service user and directories
     # - name: Retrieve and install cache
     # - name: Configure cache
+    # ------------------------------------------------------
+
+    # ------------------------------------------------------
+    # - name: IA MITIGATION BLOCK
+    - name: IA MITIGATION BLOCK
+      block:
+        - name: Configure daily log rotation in /etc/logrotate.conf
+          ansible.builtin.lineinfile:
+            create: true
+            dest: /etc/logrotate.conf
+            regexp: ^daily$
+            line: daily
+
+        - name: Make sure daily log rotation setting is not overriden in /etc/logrotate.conf
+          ansible.builtin.lineinfile:
+            create: false
+            dest: /etc/logrotate.conf
+            regexp: ^[\s]*(weekly|monthly|yearly)$
+            state: absent
+
+        - name: Configure cron.daily if not already
+          block:
+            - name: Add shebang
+              ansible.builtin.lineinfile:
+                path: /etc/cron.daily/logrotate
+                line: '#!/bin/sh'
+                insertbefore: BOF
+                create: true
+
+            - name: Add logrotate call
+              ansible.builtin.lineinfile:
+                path: /etc/cron.daily/logrotate
+                line: /usr/sbin/logrotate /etc/logrotate.conf
+                regexp: ^[\s]*/usr/sbin/logrotate[\s\S]*/etc/logrotate.conf$
+    # ------------------------------------------------------
+        - name: Find /boot/ file(s)
+          ansible.builtin.command: find -H /boot/ -maxdepth 1 -perm /u+xs,g+xwrs,o+xwrt  -type f -regextype
+            posix-extended -regex "^.*System\.map.*$"
+          register: files_found
+          changed_when: false
+          failed_when: false
+          check_mode: false
+
+        - name: Set permissions for /boot/ file(s)
+          ansible.builtin.file:
+            path: '{{ item }}'
+            mode: u-xs,g-xwrs,o-xwrt
+            state: file
+          with_items:
+            - '{{ files_found.stdout_lines }}'
+    # ------------------------------------------------------
+        - name: List /etc/sysctl.d/*.conf files
+          ansible.builtin.find:
+            paths:
+            - /etc/sysctl.d/
+            - /run/sysctl.d/
+            - /usr/local/lib/sysctl.d/
+            - /usr/lib/sysctl.d/
+            contains: ^[\s]*fs.suid_dumpable.*$
+            patterns: '*.conf'
+            file_type: any
+          register: find_sysctl_d
+
+        - name: Comment out any occurrences of fs.suid_dumpable from config files
+          ansible.builtin.replace:
+            path: '{{ item.path }}'
+            regexp: ^[\s]*fs.suid_dumpable
+            replace: '#fs.suid_dumpable'
+          loop: '{{ find_sysctl_d.files }}'
+
+        - name: Ensure sysctl fs.suid_dumpable is set to 0
+          ansible.builtin.sysctl:
+            name: fs.suid_dumpable
+            value: '0'
+            sysctl_file: /etc/sysctl.conf
+            state: present
+            reload: true
+    # ------------------------------------------------------
+        - name: List /etc/sysctl.d/*.conf files
+          ansible.builtin.find:
+            paths:
+            - /etc/sysctl.d/
+            - /run/sysctl.d/
+            - /usr/local/lib/sysctl.d/
+            - /usr/lib/sysctl.d/
+            contains: ^[\s]*kernel.randomize_va_space.*$
+            patterns: '*.conf'
+            file_type: any
+          register: find_sysctl_d
+
+        - name: Comment out any occurrences of kernel.randomize_va_space from config files
+          ansible.builtin.replace:
+            path: '{{ item.path }}'
+            regexp: ^[\s]*kernel.randomize_va_space
+            replace: '#kernel.randomize_va_space'
+          loop: '{{ find_sysctl_d.files }}'
+
+        - name: Ensure sysctl kernel.randomize_va_space is set to 2
+          ansible.builtin.sysctl:
+            name: kernel.randomize_va_space
+            value: '2'
+            sysctl_file: /etc/sysctl.conf
+            state: present
+            reload: true
+    # ------------------------------------------------------
+        - name: Set SSH Client Alive Count Max
+          block:
+
+          - name: Check for duplicate values
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*ClientAliveCountMax\s+
+              state: absent
+            check_mode: true
+            changed_when: false
+            register: dupes
+
+          - name: Deduplicate values from /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*ClientAliveCountMax\s+
+              state: absent
+            when: dupes.found is defined and dupes.found > 1
+
+          - name: Insert correct line to /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*ClientAliveCountMax\s+
+              line: ClientAliveCountMax {{ var_sshd_set_keepalive }}
+              state: present
+              insertbefore: BOF
+              validate: /usr/sbin/sshd -t -f %s
+    # ------------------------------------------------------
+        - name: Set SSH Client Alive Interval
+          block:
+
+          - name: Check for duplicate values
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*ClientAliveInterval\s+
+              state: absent
+            check_mode: true
+            changed_when: false
+            register: dupes
+
+          - name: Deduplicate values from /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*ClientAliveInterval\s+
+              state: absent
+            when: dupes.found is defined and dupes.found > 1
+
+          - name: Insert correct line to /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*ClientAliveInterval\s+
+              line: ClientAliveInterval {{ sshd_idle_timeout_value }}
+              state: present
+              insertbefore: BOF
+              validate: /usr/sbin/sshd -t -f %s
+    # ------------------------------------------------------
+        - name: Allow Only SSH Protocol 2
+          block:
+
+          - name: Check for duplicate values
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*Protocol\s+
+              state: absent
+            check_mode: true
+            changed_when: false
+            register: dupes
+
+          - name: Deduplicate values from /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*Protocol\s+
+              state: absent
+            when: dupes.found is defined and dupes.found > 1
+
+          - name: Insert correct line to /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*Protocol\s+
+              line: Protocol 2
+              state: present
+              insertbefore: BOF
+              validate: /usr/sbin/sshd -t -f %s
+    # ------------------------------------------------------
+        - name: Disable SSH Access via Empty Passwords
+          block:
+
+          - name: Check for duplicate values
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*PermitEmptyPasswords\s+
+              state: absent
+            check_mode: true
+            changed_when: false
+            register: dupes
+
+          - name: Deduplicate values from /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*PermitEmptyPasswords\s+
+              state: absent
+            when: dupes.found is defined and dupes.found > 1
+
+          - name: Insert correct line to /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*PermitEmptyPasswords\s+
+              line: PermitEmptyPasswords no
+              state: present
+              insertbefore: BOF
+              validate: /usr/sbin/sshd -t -f %s
+    # ------------------------------------------------------
+        - name: Disable SSH Root Login
+          block:
+
+          - name: Check for duplicate values
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*PermitRootLogin\s+
+              state: absent
+            check_mode: true
+            changed_when: false
+            register: dupes
+
+          - name: Deduplicate values from /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*PermitRootLogin\s+
+              state: absent
+            when: dupes.found is defined and dupes.found > 1
+
+          - name: Insert correct line to /etc/ssh/sshd_config
+            lineinfile:
+              path: /etc/ssh/sshd_config
+              create: true
+              regexp: (?i)(?i)^\s*PermitRootLogin\s+
+              line: PermitRootLogin no
+              state: present
+              insertbefore: BOF
+              validate: /usr/sbin/sshd -t -f %s
     # ------------------------------------------------------
 
     # ------------------------------------------------------
