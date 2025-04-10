@@ -106,7 +106,6 @@
               - bzip2 # for openscap OVAL defs
               - rsyslog # for openscap finding
               - cron
-              - ntp
 
         - name: Set up services
           ansible.builtin.service:
@@ -656,7 +655,7 @@
               path: /etc/ssh/sshd_config
               create: true
               regexp: (?i)(?i)^\s*ClientAliveCountMax\s+
-              line: ClientAliveCountMax {{ var_sshd_set_keepalive }}
+              line: ClientAliveCountMax 1
               state: present
               insertbefore: BOF
               validate: /usr/sbin/sshd -t -f %s
@@ -687,7 +686,7 @@
               path: /etc/ssh/sshd_config
               create: true
               regexp: (?i)(?i)^\s*ClientAliveInterval\s+
-              line: ClientAliveInterval {{ sshd_idle_timeout_value }}
+              line: ClientAliveInterval 300
               state: present
               insertbefore: BOF
               validate: /usr/sbin/sshd -t -f %s
@@ -812,6 +811,8 @@
           COCKPIT: http://{{ h_fqdn }}:8718
           ROOT:    http://{{ h_fqdn }}
           FORUM:   http://{{ h_fqdn }}/{{ h_forum_dir_name }}
+          ---
+          YOU MUST REBOOT MANUALLY FOR SOME IA MITIGATIONS TO TAKE EFFECT
 
 
     # ------------------------------------------------------

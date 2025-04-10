@@ -168,6 +168,16 @@ ssh-prod:
 debug:
 	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/prod/inventory openscap-scan.yml
 
+# make scan-dev - 
+.PHONY: scan-dev
+scan-dev:
+	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/dev/inventory openscap-scan.yml
+
+# make scan-prod -
+.PHONY: scan-prod
+scan-prod:
+	cd $(mkfile_dir)/playbooks && ANSIBLE_CONFIG=$(mkfile_dir)/ansible-timer-only.cfg ansible-playbook -i ../hosts/prod/inventory openscap-scan.yml
+
 # make create-backup - create a file backup of prod server
 # TODO make optional ansible task for restoring this during build?
 .PHONY: create-backup

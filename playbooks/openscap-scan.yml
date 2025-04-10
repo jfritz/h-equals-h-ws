@@ -70,8 +70,7 @@
 
     - name: Run openscap-scanner oval report
       ansible.builtin.command:
-        cmd: "oscap oval eval --report /tmp/oval-report.html /tmp/oval-definitions-{{ _rel.stdout }}.xml"
-        creates: /tmp/oval-report.html
+        cmd: "oscap oval eval --report /tmp/oval-report.html /tmp/oval-defs.xml"
       changed_when: true
       failed_when: false
 
@@ -86,7 +85,6 @@
 
     - name: Run openscap-scanner xccdf report
       ansible.builtin.command:
-        creates: /tmp/xccdf-report.html
         cmd: >
           oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_standard
           --results-arf arf.xml
