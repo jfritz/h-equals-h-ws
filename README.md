@@ -37,7 +37,6 @@ or
  3. make pull-certs | make push-certs
 
  ### Production HTTPS Cert Setup
- - Set ssl_enabled in inventory
- - See https://wiki.debian.org/Lighttpd#SSL.2FTLS_.28HTTPS.29
- - Once done, save off certs for future import in case of server rebuild using make pull-certs. 
-   - If you need to rebuild you'll have to reupdate TXT records in DNS route53
+ - Initial setup: See https://wiki.debian.org/Lighttpd#SSL.2FTLS_.28HTTPS.29
+ - Once set up, do `make pull-certs` and set `ssl_enabled` in prod inventory
+ - If you need to rebuild the certs themselves, you'll have to reupdate TXT records in DNS route53

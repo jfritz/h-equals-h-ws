@@ -134,7 +134,7 @@
         - name: Install cockpit
           ansible.builtin.apt:
             name: cockpit
-            state: installed
+            state: present
 
         - name: Create cockpit conf dir
           ansible.builtin.file:
