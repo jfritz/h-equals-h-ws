@@ -32,9 +32,12 @@ NOTE: Only prod builds use aws. Local builds assume local debian VM is running a
 or
 
  1. make build-infra
- 2. make update-prod
- 3. make prod
+ 2. make prod
+ 3. make create-backup | make restore-backup
+ 3. make pull-certs | make push-certs
 
  ### Production HTTPS Cert Setup
- See https://wiki.debian.org/Lighttpd#SSL.2FTLS_.28HTTPS.29
- TODO once done, save off certs for future import in case of server rebuild. if you need to rebuild you'll have to reupdate TXT records in DNS route53
+ - Set ssl_enabled in inventory
+ - See https://wiki.debian.org/Lighttpd#SSL.2FTLS_.28HTTPS.29
+ - Once done, save off certs for future import in case of server rebuild using make pull-certs. 
+   - If you need to rebuild you'll have to reupdate TXT records in DNS route53

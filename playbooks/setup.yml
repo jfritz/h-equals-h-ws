@@ -331,6 +331,18 @@
                 - '"already enabled" not in lighty_result.stdout'
               changed_when: true
 
+            # https://certbot.eff.org/instructions?ws=other&os=pip
+            - name: Set up automatic certificate renewal
+              # certbot logs: /var/log/letsencrypt/letsencrypt.log
+              ansible.builtin.cron:
+                name: "Renew https cert"
+                user: root
+                minute: "0"
+                hour: "0,12"
+                job: >
+                  /opt/certbot/bin/python -c 'import random; import time; time.sleep(random.random() * 3600)' && \
+                  sudo certbot renew -q | sudo tee -a /etc/crontab > /dev/null
+
         - name: Link /www to /var/www/html for convenience
           ansible.builtin.file:
             src: /var/www/html

@@ -201,7 +201,7 @@ restore-backup:
 	$(eval keypath = $(shell grep -i ansible_ssh_private_key_file $(mkfile_dir)/hosts/prod/inventory | cut -d"=" -f2))
 	$(eval last_backup = $(shell ls -1 -t $(mkfile_dir)/backups/*.tar.gz | head -n1))
 	
-# TODO seems OK to rm-rf /www before restoring backup. should we?
+# TODO backup what's there, blow away /www, resotre backup
 	-ssh -i $(keypath) admin@$(pub_ip) "sudo rm /tmp/backup.tar.gz"
 	@sleep 2
 	scp -r -i $(keypath) $(last_backup) admin@$(pub_ip):/tmp/backup.tar.gz
