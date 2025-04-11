@@ -99,11 +99,9 @@
               - tree
               - curl
               - whois # for generating passwords
-              - cockpit
               - lsof # for debug
               - certbot # for ssl cert sign
               - rsync # for backups
-              - bzip2 # for openscap OVAL defs
               - rsyslog # for openscap finding
               - cron
 
@@ -116,11 +114,27 @@
             - rsyslog.service
             - cron.service
 
+        - name: Configure sudo
+          community.general.sudoers:
+            name: sudo-as-root
+            state: present
+            group: sudo
+            runas: root
+            commands: ALL
+
 # TURN ON SWAP SPACE TEMPORARILY ON AWS INSTANCE
         # $ sudo /bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024
         # $ sudo /sbin/mkswap /var/swap.1
         # $ sudo chmod 600 /var/swap.1
         # $ sudo /sbin/swapon /var/swap.1
+
+    - name: COCKPIT SETUP BLOCK
+      when: h_cockpit_enabled
+      block:
+        - name: Install cockpit
+          ansible.builtin.apt:
+            name: cockpit
+            state: installed
 
         - name: Create cockpit conf dir
           ansible.builtin.file:
@@ -155,14 +169,6 @@
           loop:
             - cockpit
             - cockpit.socket
-
-        - name: Configure sudo
-          community.general.sudoers:
-            name: sudo-as-root
-            state: present
-            group: sudo
-            runas: root
-            commands: ALL
 
     # ------------------------------------------------------
 
@@ -281,6 +287,7 @@
 
     # ------------------------------------------------------
     - name: HTTPD SETUP BLOCK
+      tags: httpd
       block:
 
         - name: Retrieve and install httpd
@@ -799,12 +806,6 @@
 
     # ------------------------------------------------------
     # - name: CLEANUP BLOCK
-    - name: Disable root ssh
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        line: "# PermitRootLogin yes"
-        regexp: "^.*PermitRootLogin.*"
-
     - name: Remove acl
       ansible.builtin.apt:
         name: acl
